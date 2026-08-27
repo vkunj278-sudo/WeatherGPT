@@ -49,8 +49,69 @@ Answer the user's question naturally.
 """
 
     response = client.models.generate_content(
-        model="gemini-3.7-flash",
+        model="gemini-3.6-flash",
         contents=prompt
     )
 
     return response.text
+
+def extract_city(question):
+
+    prompt = f"""
+You are a location extraction system.
+
+Read the user's question:
+
+"{question}"
+
+Find the city or location mentioned in the question.
+
+Return ONLY the city or location name.
+Do not provide any explanation.
+Do not use quotation marks.
+
+If no location is mentioned, return:
+UNKNOWN
+"""
+
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt
+    )
+
+    city = response.text.strip()
+
+    return city
+
+def extract_intent(question):
+
+    prompt = f"""
+You are a weather query understanding system.
+
+Analyze this user question:
+
+"{question}"
+
+Identify the user's weather-related intent.
+
+Choose ONLY ONE of these intents:
+
+CURRENT_WEATHER
+FORECAST
+RAIN
+TEMPERATURE
+HUMIDITY
+WIND
+WEATHER_ADVICE
+GENERAL_WEATHER
+
+Return ONLY the intent name.
+Do not provide any explanation.
+"""
+
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt
+    )
+
+    return response.text.strip().upper()

@@ -1,4 +1,4 @@
-from backend.ai_service import ask_ai
+from backend.ai_service import ask_ai, extract_city, extract_intent
 from fastapi import FastAPI
 from backend.weather_service import get_weather
 from backend.location_service import get_location
@@ -64,4 +64,43 @@ def ask_ai_test(question: str):
     return {
         "question": question,
         "answer": answer
+    }
+
+@app.get("/smart-weather")
+def smart_weather(question: str):
+
+    city = extract_city(question)
+
+    if city == "UNKNOWN":
+        return {
+            "error": "I could not find a city in your question."
+        }
+
+    weather_data = get_weather(city)
+
+    if "error" in weather_data:
+        return weather_data
+
+    answer = ask_ai(
+        question=question,
+        weather_data=weather_data
+    )
+
+    return {
+        "question": question,
+        "detected_city": city,
+        "weather": weather_data,
+        "answer": answer
+    }
+
+@app.get("/understand-question")
+def understand_question(question: str):
+
+    city = extract_city(question)
+    intent = extract_intent(question)
+
+    return {
+        "question": question,
+        "detected_city": city,
+        "detected_intent": intent
     }
