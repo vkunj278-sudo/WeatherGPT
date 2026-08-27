@@ -1,11 +1,16 @@
 from fastapi import FastAPI
-
+from backend.condition_service import (
+    analyze_conditions,
+    analyze_forecast_conditions
+)
+from backend.severity_service import determine_severity
+from backend.recommendation_service import generate_recommendations
+from backend.alert_service import generate_warnings
 from backend.conversation_service import save_conversation, get_conversation
 from backend.ai_service import ask_ai
 from backend.understanding_service import understand_weather_question
 from backend.router_service import decide_data_source
 from backend.forecast_filter_service import filter_forecast
-
 from backend.weather_service import get_weather
 from backend.location_service import get_location
 from backend.forecast_service import get_forecast
@@ -185,7 +190,82 @@ def smart_weather(
             time_period
         )
 
-    # Step 9: Generate final AI answer
+    # Step 9: Analyze weather intelligence
+    intelligence = {
+        "conditions": [],
+        "severity": "unknown",
+        "recommendations": [],
+        "warnings": []
+    }
+
+
+    # Analyze current weather
+    if weather_data:
+
+        condition_result = analyze_conditions(
+            weather_data
+        )
+
+        conditions = condition_result["conditions"]
+
+        severity = determine_severity(
+            conditions
+        )
+
+        recommendations = generate_recommendations(
+            conditions
+        )
+
+        warnings = generate_warnings(
+            conditions,
+            severity
+        )
+
+        intelligence = {
+            "conditions": conditions,
+            "severity": severity,
+            "recommendations": recommendations,
+            "warnings": warnings
+        }
+
+
+    # Analyze forecast
+    elif forecast_data:
+
+        condition_result = analyze_forecast_conditions(
+            forecast_data
+        )
+
+        conditions = condition_result["conditions"]
+
+        severity = determine_severity(
+            conditions
+        )
+
+        recommendations = generate_recommendations(
+            conditions
+        )
+
+        warnings = generate_warnings(
+            conditions,
+            severity
+        )
+
+        intelligence = {
+            "conditions": conditions,
+            "severity": severity,
+            "recommendations": recommendations,
+            "warnings": warnings
+        }
+
+
+    # Step 10: Generate final AI answer
+    answer = ask_ai(
+        question=question,
+        weather_data=weather_data,
+        forecast_data=forecast_data
+    )
+    # Step 10: Generate final AI answer
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
@@ -202,5 +282,6 @@ def smart_weather(
         "data_source": data_source,
         "weather": weather_data,
         "forecast": forecast_data,
+        "intelligence": intelligence,
         "answer": answer
     }
