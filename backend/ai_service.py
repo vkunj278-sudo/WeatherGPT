@@ -9,6 +9,9 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=API_KEY)
 
 
+MODEL_NAME = "gemini-3.6-flash"
+
+
 def ask_ai(question, weather_data=None, forecast_data=None):
 
     weather_context = ""
@@ -48,115 +51,33 @@ IMPORTANT RULES:
 Answer the user's question naturally.
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
 
-    return response.text
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt
+        )
 
-def extract_city(question):
+        return response.text
 
-    prompt = f"""
-You are a location extraction system.
+    except Exception as e:
 
-Read the user's question:
+        error_text = str(e)
 
-"{question}"
+        if "503" in error_text or "UNAVAILABLE" in error_text:
+            return (
+                "Gemini is temporarily unavailable. "
+                "Please try again in a few moments."
+            )
 
-Find the city or location mentioned in the question.
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+            return (
+                "The Gemini API quota has temporarily been reached. "
+                "Please try again later."
+            )
 
-Return ONLY the city or location name.
-Do not provide any explanation.
-Do not use quotation marks.
+        return "Sorry, I could not generate an AI response right now."
 
-If no location is mentioned, return:
-UNKNOWN
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
-
-    city = response.text.strip()
-
-    return city
-
-def extract_intent(question):
-
-    prompt = f"""
-You are a weather query understanding system.
-
-Analyze this user question:
-
-"{question}"
-
-Identify the user's weather-related intent.
-
-Choose ONLY ONE of these intents:
-
-CURRENT_WEATHER
-FORECAST
-RAIN
-TEMPERATURE
-HUMIDITY
-WIND
-WEATHER_ADVICE
-GENERAL_WEATHER
-
-Return ONLY the intent name.
-Do not provide any explanation.
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
-
-    return response.text.strip().upper()
-
-def extract_time(question):
-
-    prompt = f"""
-You are a weather query time extraction system.
-
-Analyze this user question:
-
-"{question}"
-
-Identify the time period the user is asking about.
-
-Choose ONLY ONE:
-
-NOW
-TODAY
-TOMORROW
-THIS_WEEK
-THIS_WEEKEND
-FUTURE
-UNKNOWN
-
-Rules:
-
-- "right now", "currently", "at the moment" → NOW
-- "today" → TODAY
-- "tomorrow", "next day" → TOMORROW
-- "this week" → THIS_WEEK
-- "this weekend", "Saturday and Sunday" → THIS_WEEKEND
-- Any other future date or period → FUTURE
-- If no time is specified → UNKNOWN
-
-Return ONLY the selected value.
-Do not provide any explanation.
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
-
-    return response.text.strip().upper()
 
 def understand_question(question):
 
@@ -174,6 +95,7 @@ INTENT: <one intent>
 TIME: <one time period>
 
 Allowed intents:
+
 CURRENT_WEATHER
 FORECAST
 RAIN
@@ -184,6 +106,7 @@ WEATHER_ADVICE
 GENERAL_WEATHER
 
 Allowed time periods:
+
 NOW
 TODAY
 TOMORROW
@@ -193,6 +116,7 @@ FUTURE
 UNKNOWN
 
 Rules:
+
 - Extract the city mentioned by the user.
 - If no city is mentioned, use UNKNOWN.
 - Determine the most appropriate weather intent.
@@ -207,12 +131,41 @@ INTENT: RAIN
 TIME: TOMORROW
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
 
-    result = response.text.strip()
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt
+        )
+
+        result = response.text.strip()
+
+    except Exception as e:
+
+        error_text = str(e)
+
+        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+            return {
+                "city": "UNKNOWN",
+                "intent": "GENERAL_WEATHER",
+                "time": "UNKNOWN",
+                "error": "Gemini API quota has been reached."
+            }
+
+        if "503" in error_text or "UNAVAILABLE" in error_text:
+            return {
+                "city": "UNKNOWN",
+                "intent": "GENERAL_WEATHER",
+                "time": "UNKNOWN",
+                "error": "Gemini is temporarily unavailable."
+            }
+
+        return {
+            "city": "UNKNOWN",
+            "intent": "GENERAL_WEATHER",
+            "time": "UNKNOWN",
+            "error": "Unable to understand the question."
+        }
 
     city = "UNKNOWN"
     intent = "GENERAL_WEATHER"

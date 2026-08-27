@@ -1,11 +1,15 @@
+from fastapi import FastAPI
+
 from backend.ai_service import ask_ai
 from backend.understanding_service import understand_weather_question
 from backend.router_service import decide_data_source
-from fastapi import FastAPI
+from backend.forecast_filter_service import filter_forecast
+
 from backend.weather_service import get_weather
 from backend.location_service import get_location
 from backend.forecast_service import get_forecast
 from backend.intelligence_service import analyze_weather
+
 
 app = FastAPI(title="WeatherGPT API")
 
@@ -29,6 +33,7 @@ def location(city: str):
 
 @app.get("/forecast/{city}")
 def forecast(city: str):
+
     location_data = get_location(city)
 
     if "error" in location_data:
@@ -42,6 +47,7 @@ def forecast(city: str):
 
 @app.get("/weather-analysis/{city}")
 def weather_analysis(city: str):
+
     weather_data = get_weather(city)
 
     if "error" in weather_data:
@@ -59,8 +65,11 @@ def weather_analysis(city: str):
         "wind_speed": weather_data.get("wind_speed"),
         "analysis": analysis
     }
+
+
 @app.get("/ask-ai")
 def ask_ai_test(question: str):
+
     answer = ask_ai(question)
 
     return {
@@ -68,15 +77,18 @@ def ask_ai_test(question: str):
         "answer": answer
     }
 
+
 @app.get("/smart-weather")
 def smart_weather(question: str):
 
+    # Step 1: Understand the complete question
     understanding = understand_weather_question(question)
 
     city = understanding["city"]
     intent = understanding["intent"]
     time_period = understanding["time"]
 
+    # Step 2: Check whether a city was detected
     if city == "UNKNOWN":
         return {
             "error": "I could not find a city in your question.",
@@ -84,11 +96,13 @@ def smart_weather(question: str):
             "understanding": understanding
         }
 
+    # Step 3: Decide which weather data is required
     data_source = decide_data_source(intent)
 
     weather_data = None
     forecast_data = None
 
+    # Step 4: Current weather
     if data_source == "current":
 
         weather_data = get_weather(city)
@@ -96,6 +110,7 @@ def smart_weather(question: str):
         if "error" in weather_data:
             return weather_data
 
+    # Step 5: Forecast
     elif data_source == "forecast":
 
         location_data = get_location(city)
@@ -111,6 +126,13 @@ def smart_weather(question: str):
         if "error" in forecast_data:
             return forecast_data
 
+        # Filter forecast according to requested time
+        forecast_data = filter_forecast(
+            forecast_data,
+            time_period
+        )
+
+    # Step 6: Current weather + forecast
     elif data_source == "both":
 
         weather_data = get_weather(city)
@@ -131,12 +153,20 @@ def smart_weather(question: str):
         if "error" in forecast_data:
             return forecast_data
 
+        # Filter forecast according to requested time
+        forecast_data = filter_forecast(
+            forecast_data,
+            time_period
+        )
+
+    # Step 7: Generate final AI answer
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
         forecast_data=forecast_data
     )
 
+    # Step 8: Return complete response
     return {
         "question": question,
         "detected_city": city,
@@ -146,26 +176,4 @@ def smart_weather(question: str):
         "weather": weather_data,
         "forecast": forecast_data,
         "answer": answer
-    }
-
-@app.get("/understand-question")
-def understand_question(question: str):
-
-    city = extract_city(question)
-    intent = extract_intent(question)
-
-    return {
-        "question": question,
-        "detected_city": city,
-        "detected_intent": intent
-    }
-
-@app.get("/understand-time")
-def understand_time(question: str):
-
-    time_period = extract_time(question)
-
-    return {
-        "question": question,
-        "detected_time": time_period
     }
