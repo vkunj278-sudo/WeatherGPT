@@ -1,3 +1,4 @@
+from backend.ai_service import ask_ai
 from fastapi import FastAPI
 from backend.weather_service import get_weather
 from backend.location_service import get_location
@@ -55,4 +56,12 @@ def weather_analysis(city: str):
         "weather": weather_data.get("weather"),
         "wind_speed": weather_data.get("wind_speed"),
         "analysis": analysis
+    }
+@app.get("/ask-ai")
+def ask_ai_test(question: str):
+    answer = ask_ai(question)
+
+    return {
+        "question": question,
+        "answer": answer
     }
