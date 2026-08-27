@@ -10,21 +10,6 @@ def filter_forecast(forecast_data, time_period):
 
     today = datetime.now().date()
 
-    if time_period == "NOW":
-        return {
-            "location": forecast_data.get("location"),
-            "forecast": forecast_list[:1]
-        }
-
-    elif time_period == "TODAY":
-        target_date = today
-
-    elif time_period == "TOMORROW":
-        target_date = today + timedelta(days=1)
-
-    else:
-        return forecast_data
-
     filtered = []
 
     for item in forecast_list:
@@ -35,11 +20,59 @@ def filter_forecast(forecast_data, time_period):
                 "%Y-%m-%d %H:%M:%S"
             )
 
-            if forecast_datetime.date() == target_date:
+            forecast_date = forecast_datetime.date()
+
+        except (ValueError, TypeError, KeyError):
+            continue
+
+        # NOW
+        if time_period == "NOW":
+
+            if forecast_datetime >= datetime.now():
+                filtered.append(item)
+                break
+
+        # TODAY
+        elif time_period == "TODAY":
+
+            if forecast_date == today:
                 filtered.append(item)
 
-        except (ValueError, TypeError):
-            continue
+        # TOMORROW
+        elif time_period == "TOMORROW":
+
+            tomorrow = today + timedelta(days=1)
+
+            if forecast_date == tomorrow:
+                filtered.append(item)
+
+        # THIS WEEK
+        elif time_period == "THIS_WEEK":
+
+            if today <= forecast_date <= today + timedelta(days=6):
+                filtered.append(item)
+
+        # THIS WEEKEND
+        elif time_period == "THIS_WEEKEND":
+
+            days_until_saturday = (5 - today.weekday()) % 7
+
+            saturday = today + timedelta(days=days_until_saturday)
+            sunday = saturday + timedelta(days=1)
+
+            if saturday <= forecast_date <= sunday:
+                filtered.append(item)
+
+        # FUTURE
+        elif time_period == "FUTURE":
+
+            if forecast_date > today:
+                filtered.append(item)
+
+        # UNKNOWN
+        else:
+
+            filtered.append(item)
 
     return {
         "location": forecast_data.get("location"),
