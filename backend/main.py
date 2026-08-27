@@ -1,4 +1,6 @@
-from backend.ai_service import ask_ai, extract_city, extract_intent
+from backend.ai_service import ask_ai
+from backend.understanding_service import understand_weather_question
+from backend.router_service import decide_data_source
 from fastapi import FastAPI
 from backend.weather_service import get_weather
 from backend.location_service import get_location
@@ -69,27 +71,80 @@ def ask_ai_test(question: str):
 @app.get("/smart-weather")
 def smart_weather(question: str):
 
-    city = extract_city(question)
+    understanding = understand_weather_question(question)
+
+    city = understanding["city"]
+    intent = understanding["intent"]
+    time_period = understanding["time"]
 
     if city == "UNKNOWN":
         return {
-            "error": "I could not find a city in your question."
+            "error": "I could not find a city in your question.",
+            "question": question,
+            "understanding": understanding
         }
 
-    weather_data = get_weather(city)
+    data_source = decide_data_source(intent)
 
-    if "error" in weather_data:
-        return weather_data
+    weather_data = None
+    forecast_data = None
+
+    if data_source == "current":
+
+        weather_data = get_weather(city)
+
+        if "error" in weather_data:
+            return weather_data
+
+    elif data_source == "forecast":
+
+        location_data = get_location(city)
+
+        if "error" in location_data:
+            return location_data
+
+        forecast_data = get_forecast(
+            location_data["latitude"],
+            location_data["longitude"]
+        )
+
+        if "error" in forecast_data:
+            return forecast_data
+
+    elif data_source == "both":
+
+        weather_data = get_weather(city)
+
+        if "error" in weather_data:
+            return weather_data
+
+        location_data = get_location(city)
+
+        if "error" in location_data:
+            return location_data
+
+        forecast_data = get_forecast(
+            location_data["latitude"],
+            location_data["longitude"]
+        )
+
+        if "error" in forecast_data:
+            return forecast_data
 
     answer = ask_ai(
         question=question,
-        weather_data=weather_data
+        weather_data=weather_data,
+        forecast_data=forecast_data
     )
 
     return {
         "question": question,
         "detected_city": city,
+        "detected_intent": intent,
+        "detected_time": time_period,
+        "data_source": data_source,
         "weather": weather_data,
+        "forecast": forecast_data,
         "answer": answer
     }
 
@@ -103,4 +158,14 @@ def understand_question(question: str):
         "question": question,
         "detected_city": city,
         "detected_intent": intent
+    }
+
+@app.get("/understand-time")
+def understand_time(question: str):
+
+    time_period = extract_time(question)
+
+    return {
+        "question": question,
+        "detected_time": time_period
     }
