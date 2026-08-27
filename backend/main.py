@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 
+from backend.conversation_service import save_conversation, get_conversation
 from backend.ai_service import ask_ai
 from backend.understanding_service import understand_weather_question
 from backend.router_service import decide_data_source
@@ -79,30 +80,55 @@ def ask_ai_test(question: str):
 
 
 @app.get("/smart-weather")
-def smart_weather(question: str):
+def smart_weather(
+    question: str,
+    session_id: str = "default"
+):
 
-    # Step 1: Understand the complete question
-    understanding = understand_weather_question(question)
+    # Step 1: Get previous conversation information
+    memory = get_conversation(session_id)
+
+    # Step 2: Understand the current question using previous context
+    understanding = understand_weather_question(
+        question,
+        memory
+    )
 
     city = understanding["city"]
     intent = understanding["intent"]
     time_period = understanding["time"]
 
-    # Step 2: Check whether a city was detected
+    # Step 3: If no city was detected, use previous conversation memory
     if city == "UNKNOWN":
-        return {
-            "error": "I could not find a city in your question.",
-            "question": question,
-            "understanding": understanding
-        }
 
-    # Step 3: Decide which weather data is required
+        if "city" in memory:
+            city = memory["city"]
+
+        else:
+            return {
+                "status": "need_location",
+                "question": question,
+                "detected_intent": intent,
+                "detected_time": time_period,
+                "message": "Which city or location would you like me to check?"
+            }
+
+    # Step 4: Save current conversation information
+    save_conversation(
+        session_id,
+        city=city,
+        intent=intent,
+        time_period=time_period,
+        last_question=question
+    )
+
+    # Step 5: Decide which weather data is required
     data_source = decide_data_source(intent)
 
     weather_data = None
     forecast_data = None
 
-    # Step 4: Current weather
+    # Step 6: Current weather
     if data_source == "current":
 
         weather_data = get_weather(city)
@@ -110,7 +136,7 @@ def smart_weather(question: str):
         if "error" in weather_data:
             return weather_data
 
-    # Step 5: Forecast
+    # Step 7: Forecast
     elif data_source == "forecast":
 
         location_data = get_location(city)
@@ -132,7 +158,7 @@ def smart_weather(question: str):
             time_period
         )
 
-    # Step 6: Current weather + forecast
+    # Step 8: Current weather + forecast
     elif data_source == "both":
 
         weather_data = get_weather(city)
@@ -159,16 +185,17 @@ def smart_weather(question: str):
             time_period
         )
 
-    # Step 7: Generate final AI answer
+    # Step 9: Generate final AI answer
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
         forecast_data=forecast_data
     )
 
-    # Step 8: Return complete response
+    # Step 10: Return complete response
     return {
         "question": question,
+        "session_id": session_id,
         "detected_city": city,
         "detected_intent": intent,
         "detected_time": time_period,

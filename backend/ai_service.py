@@ -79,12 +79,34 @@ Answer the user's question naturally.
         return "Sorry, I could not generate an AI response right now."
 
 
-def understand_question(question):
+def understand_question(question, conversation_context=None):
+
+    if conversation_context is None:
+        conversation_context = {}
+
+    previous_city = conversation_context.get("city", "UNKNOWN")
+    previous_intent = conversation_context.get("intent", "UNKNOWN")
+    previous_time = conversation_context.get("time", "UNKNOWN")
+    previous_question = conversation_context.get("last_question", "NONE")
 
     prompt = f"""
 You are the query understanding system for WeatherGPT.
 
-Analyze this user question:
+PREVIOUS CONVERSATION CONTEXT:
+
+Previous city:
+{previous_city}
+
+Previous intent:
+{previous_intent}
+
+Previous time:
+{previous_time}
+
+Previous question:
+{previous_question}
+
+CURRENT USER QUESTION:
 
 "{question}"
 
