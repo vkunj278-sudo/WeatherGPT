@@ -57,5 +57,12 @@ def generate_recommendations(conditions):
         recommendations.append(
             "Weather conditions are generally suitable for outdoor activities."
         )
+        # Cloudy weather
+
+    if "cloudy" in conditions:
+
+        recommendations.append(
+            "Light, comfortable clothing is suitable. Keep a light layer handy in case conditions change."
+        )
 
     return recommendations
