@@ -10,13 +10,21 @@ body {
   color: #1f2937;
 }
 
+button,
+input {
+  font-family: inherit;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Header */
+
+/* =========================
+   HEADER
+========================= */
 
 .header {
   height: 70px;
@@ -28,6 +36,10 @@ body {
   justify-content: space-between;
 
   padding: 0 8%;
+
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .logo {
@@ -49,46 +61,63 @@ body {
   height: 9px;
 
   border-radius: 50%;
+
   background: #22c55e;
+
+  display: inline-block;
 }
 
 
-/* Main */
+/* =========================
+   MAIN
+========================= */
 
 .main {
   width: 100%;
   max-width: 1000px;
 
-  margin: auto;
+  margin: 0 auto;
+
   padding: 60px 20px;
 }
 
 
-/* Hero */
+/* =========================
+   HERO
+========================= */
 
 .hero {
   text-align: center;
+
   margin-bottom: 45px;
 }
 
 .hero-icon {
   font-size: 60px;
+
   margin-bottom: 20px;
 }
 
 .hero h1 {
   font-size: 46px;
+
   line-height: 1.15;
+
   margin-bottom: 18px;
 }
 
 .hero p {
   color: #6b7280;
+
   font-size: 18px;
+
+  line-height: 1.6;
 }
 
 
-/* Chat card */
+/* =========================
+   CHAT CARD
+========================= */
 
 .chat-card {
   background: white;
@@ -97,18 +126,22 @@ body {
 
   padding: 30px;
 
+  border: 1px solid #e5e7eb;
+
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.08);
-
-  border: 1px solid #e5e7eb;
 }
 
 
-/* Welcome */
+/* =========================
+   WELCOME MESSAGE
+========================= */
 
 .welcome-message {
   display: flex;
+
   gap: 15px;
+
   margin-bottom: 30px;
 }
 
@@ -129,21 +162,239 @@ body {
   flex-shrink: 0;
 }
 
+.message {
+  flex: 1;
+}
+
 .message h3 {
   margin-bottom: 7px;
 }
 
 .message p {
   color: #6b7280;
+
   line-height: 1.6;
 }
 
 
-/* Suggestions */
+/* =========================
+   ANSWER
+========================= */
+
+.answer-message {
+  display: flex;
+
+  gap: 15px;
+
+  margin-bottom: 20px;
+
+  padding: 18px;
+
+  background: #f8fafc;
+
+  border-radius: 14px;
+
+  border: 1px solid #e5e7eb;
+}
+
+.answer-content p {
+  white-space: pre-line;
+}
+
+
+/* =========================
+   DATA CARDS
+========================= */
+
+.data-card {
+  margin-bottom: 20px;
+
+  padding: 20px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e5e7eb;
+
+  border-radius: 14px;
+}
+
+.data-card h3 {
+  margin-bottom: 18px;
+}
+
+
+/* =========================
+   WEATHER GRID
+========================= */
+
+.weather-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 12px;
+}
+
+.weather-item {
+  background: white;
+
+  padding: 15px;
+
+  border-radius: 10px;
+
+  border: 1px solid #e5e7eb;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.weather-item span {
+  font-size: 13px;
+
+  color: #6b7280;
+}
+
+.weather-item strong {
+  font-size: 18px;
+}
+
+
+/* =========================
+   INTELLIGENCE
+========================= */
+
+.intelligence-section {
+  margin-bottom: 15px;
+}
+
+.intelligence-section:last-child {
+  margin-bottom: 0;
+}
+
+.intelligence-section strong {
+  display: block;
+
+  margin-bottom: 8px;
+}
+
+.tag-container {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
+.tag {
+  background: #e0f2fe;
+
+  color: #0369a1;
+
+  padding: 6px 10px;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+}
+
+.severity {
+  display: inline-block;
+
+  padding: 6px 12px;
+
+  background: #fef3c7;
+
+  color: #92400e;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+}
+
+.intelligence-section ul {
+  padding-left: 20px;
+
+  color: #4b5563;
+
+  line-height: 1.7;
+}
+
+
+/* =========================
+   ALERTS
+========================= */
+
+.alert-card {
+  margin-bottom: 20px;
+
+  padding: 20px;
+
+  background: #fff7ed;
+
+  border: 1px solid #fed7aa;
+
+  border-radius: 14px;
+}
+
+.alert-card h3 {
+  margin-bottom: 15px;
+
+  color: #9a3412;
+}
+
+.alert-item {
+  padding: 12px;
+
+  margin-bottom: 8px;
+
+  background: white;
+
+  border-radius: 8px;
+
+  border: 1px solid #fed7aa;
+
+  color: #7c2d12;
+}
+
+.alert-item:last-child {
+  margin-bottom: 0;
+}
+
+
+/* =========================
+   ERROR
+========================= */
+
+.error-message {
+  margin-bottom: 20px;
+
+  padding: 14px;
+
+  background: #fff7ed;
+
+  border: 1px solid #fed7aa;
+
+  border-radius: 10px;
+
+  color: #9a3412;
+
+  line-height: 1.5;
+}
+
+
+/* =========================
+   SUGGESTIONS
+========================= */
 
 .suggestions {
   display: flex;
+
   flex-wrap: wrap;
+
   gap: 10px;
 
   margin-bottom: 25px;
@@ -162,18 +413,31 @@ body {
 
   font-size: 14px;
 
-  transition: 0.2s;
+  transition:
+    background 0.2s,
+    transform 0.2s;
 }
 
-.suggestions button:hover {
+.suggestions button:hover:not(:disabled) {
   background: #eef6ff;
+
+  transform: translateY(-1px);
+}
+
+.suggestions button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.6;
 }
 
 
-/* Input */
+/* =========================
+   INPUT
+========================= */
 
 .input-area {
   display: flex;
+
   gap: 10px;
 
   border: 1px solid #d1d5db;
@@ -189,11 +453,20 @@ body {
   flex: 1;
 
   border: none;
+
   outline: none;
 
   padding: 12px;
 
   font-size: 16px;
+
+  min-width: 0;
+}
+
+.input-area input:disabled {
+  background: #f3f4f6;
+
+  cursor: wait;
 }
 
 .send-button {
@@ -211,14 +484,38 @@ body {
   font-size: 20px;
 
   cursor: pointer;
+
+  transition:
+    background 0.2s,
+    transform 0.2s;
 }
 
-.send-button:hover {
+.send-button:hover:not(:disabled) {
   background: #1d4ed8;
+
+  transform: translateY(-1px);
+}
+
+.send-button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.6;
+}
+
+.input-hint {
+  text-align: right;
+
+  margin-top: 8px;
+
+  color: #9ca3af;
+
+  font-size: 12px;
 }
 
 
-/* Footer */
+/* =========================
+   FOOTER
+========================= */
 
 footer {
   text-align: center;
@@ -233,7 +530,9 @@ footer {
 }
 
 
-/* Mobile */
+/* =========================
+   MOBILE
+========================= */
 
 @media (max-width: 600px) {
 
@@ -243,6 +542,18 @@ footer {
 
   .status {
     display: none;
+  }
+
+  .main {
+    padding: 40px 15px;
+  }
+
+  .hero {
+    margin-bottom: 30px;
+  }
+
+  .hero-icon {
+    font-size: 50px;
   }
 
   .hero h1 {
@@ -257,11 +568,28 @@ footer {
     padding: 20px;
   }
 
+  .welcome-message {
+    align-items: flex-start;
+  }
+
   .suggestions {
     flex-direction: column;
   }
 
   .suggestions button {
     width: 100%;
+  }
+
+  .weather-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .input-area input {
+    font-size: 14px;
+  }
+
+  .send-button {
+    width: 44px;
+    height: 44px;
   }
 }
