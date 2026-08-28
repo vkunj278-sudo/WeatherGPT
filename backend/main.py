@@ -8,6 +8,12 @@ from backend.condition_service import (
 from backend.severity_service import determine_severity
 from backend.recommendation_service import generate_recommendations
 from backend.alert_service import generate_warnings
+from backend.alert_manager import (
+    create_alert,
+    get_alerts,
+    clear_alerts,
+    resolve_alert
+)
 
 from backend.conversation_service import (
     save_conversation,
@@ -90,7 +96,50 @@ def ask_ai_test(question: str):
         "question": question,
         "answer": answer
     }
+@app.get("/alerts")
+def alerts(
+    city: str = None,
+    status: str = None
+):
 
+    return {
+        "alerts": get_alerts(
+            city=city,
+            status=status
+        )
+    }
+
+
+@app.get("/alerts/{city}")
+def city_alerts(city: str):
+
+    return {
+        "city": city,
+        "alerts": get_alerts(city=city)
+    }
+
+
+@app.patch("/alerts/{alert_id}/resolve")
+def resolve_alert_endpoint(alert_id: int):
+
+    alert = resolve_alert(alert_id)
+
+    if alert is None:
+
+        return {
+            "error": "Alert not found."
+        }
+
+    return {
+        "message": "Alert resolved successfully.",
+        "alert": alert
+    }
+
+
+@app.delete("/alerts")
+def delete_alerts():
+
+    return clear_alerts()
 
 @app.get("/smart-weather")
 def smart_weather(
@@ -303,14 +352,28 @@ def smart_weather(
             "warnings": warnings
         }
 
-    # Step 13: Generate final AI answer
+    # Step 13: Create alerts from generated warnings
+    created_alerts = []
+
+    for warning in intelligence["warnings"]:
+
+        alert = create_alert(
+            city=city,
+            severity=intelligence["severity"],
+            warning=warning,
+            conditions=intelligence["conditions"]
+        )
+
+        created_alerts.append(alert)
+
+    # Step 14: Generate final AI answer
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
         forecast_data=forecast_data
     )
 
-    # Step 14: Return complete response
+    # Step 15: Return complete response
     return {
         "question": question,
         "session_id": session_id,
@@ -321,5 +384,6 @@ def smart_weather(
         "weather": weather_data,
         "forecast": forecast_data,
         "intelligence": intelligence,
+        "alerts": created_alerts,
         "answer": answer
     }
