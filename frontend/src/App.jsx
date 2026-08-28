@@ -11,6 +11,7 @@ function App() {
   const [forecast, setForecast] = useState(null);
   const [intelligence, setIntelligence] = useState(null);
   const [alerts, setAlerts] = useState([]);
+  const [alertRequested, setAlertRequested] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +32,12 @@ function App() {
     setForecast(null);
     setIntelligence(null);
     setAlerts([]);
+
+    setAlertRequested(
+      /alert|warning|danger|storm|thunderstorm/i.test(
+        trimmedQuestion
+      )
+    );
 
     const controller = new AbortController();
 
@@ -77,7 +84,6 @@ function App() {
       );
 
       if (!response.ok) {
-
         let errorMessage =
           `Backend returned HTTP ${response.status}`;
 
@@ -94,7 +100,6 @@ function App() {
             errorMessage =
               errorData.message;
           }
-
         } catch {
           // Keep default message.
         }
@@ -107,13 +112,10 @@ function App() {
       let data;
 
       try {
-
         data = JSON.parse(
           rawText
         );
-
       } catch {
-
         data = {
           answer: rawText
         };
@@ -132,7 +134,6 @@ function App() {
         data.status ===
         "need_location"
       ) {
-
         setAnswer(
           data.message ||
           "Please provide a city or location."
@@ -146,25 +147,18 @@ function App() {
       // --------------------------------------------------
 
       if (data.answer) {
-
         setAnswer(
           String(data.answer)
         );
-
       } else if (data.message) {
-
         setAnswer(
           String(data.message)
         );
-
       } else if (data.response) {
-
         setAnswer(
           String(data.response)
         );
-
       } else {
-
         setAnswer(
           "WeatherGPT received the weather information."
         );
@@ -185,7 +179,6 @@ function App() {
       // --------------------------------------------------
 
       if (data.forecast) {
-
         setForecast(
           data.forecast
         );
@@ -196,7 +189,6 @@ function App() {
       // --------------------------------------------------
 
       if (data.intelligence) {
-
         setIntelligence(
           data.intelligence
         );
@@ -211,22 +203,18 @@ function App() {
           data.alerts
         )
       ) {
-
         setAlerts(
           data.alerts
         );
-
       } else if (
         data.alerts
       ) {
-
         setAlerts([
           data.alerts
         ]);
       }
 
     } catch (err) {
-
       console.error(
         "WeatherGPT request error:",
         err
@@ -238,32 +226,25 @@ function App() {
         err.name ===
         "AbortError"
       ) {
-
         setError(
           "The request took too long. Please try again."
         );
-
       } else if (
         err.message &&
         err.message.includes(
           "Failed to fetch"
         )
       ) {
-
         setError(
           "The browser could not connect to WeatherGPT. Check that FastAPI is running and CORS is enabled."
         );
-
       } else {
-
         setError(
           err.message ||
           "Something went wrong while contacting WeatherGPT."
         );
       }
-
     } finally {
-
       setLoading(false);
     }
   };
@@ -272,12 +253,10 @@ function App() {
   const handleKeyDown = (
     event
   ) => {
-
     if (
       event.key === "Enter" &&
       !event.shiftKey
     ) {
-
       event.preventDefault();
 
       askWeatherGPT();
@@ -288,7 +267,6 @@ function App() {
   const useSuggestion = (
     text
   ) => {
-
     setQuestion(text);
     setError("");
   };
@@ -520,7 +498,7 @@ function App() {
                       </span>
 
                       <strong>
-                        {weather.wind_speed}
+                        {weather.wind_speed} m/s
                       </strong>
 
                     </div>
@@ -624,28 +602,17 @@ function App() {
 
                           )}
 
-                          {item.wind_speed !==
-                            undefined && (
-
+                          {item.wind_speed !== undefined && (
                             <span>
-                              💨{" "}
-                              {item.wind_speed}
+                              💨 Wind {item.wind_speed} m/s
                             </span>
-
                           )}
 
-                          {item.rain_3h !==
-                            undefined &&
-                            Number(
-                              item.rain_3h
-                            ) > 0 && (
-
-                              <span>
-                                🌧️{" "}
-                                {item.rain_3h} mm
-                              </span>
-
-                            )}
+                          {item.rain_3h !== undefined && (
+                            <span>
+                              🌧️ Rain {item.rain_3h} mm
+                            </span>
+                          )}
 
                         </div>
 
@@ -828,7 +795,7 @@ function App() {
           {/* ALERTS */}
 
           {!loading &&
-            alerts.length > 0 && (
+            (alerts.length > 0 || alertRequested) && (
 
               <div className="alert-card">
 
@@ -836,30 +803,40 @@ function App() {
                   ⚠️ Weather Alerts
                 </h3>
 
-                {alerts.map(
-                  (
-                    alert,
-                    index
-                  ) => (
+                {alerts.length > 0 ? (
 
-                    <div
-                      className="alert-item"
-                      key={index}
-                    >
+                  alerts.map(
+                    (
+                      alert,
+                      index
+                    ) => (
 
-                      {typeof alert ===
-                      "string"
-                        ? alert
-                        : alert.warning ||
-                          alert.message ||
-                          alert.description ||
-                          JSON.stringify(
-                            alert
-                          )}
+                      <div
+                        className="alert-item"
+                        key={index}
+                      >
 
-                    </div>
+                        {typeof alert ===
+                        "string"
+                          ? alert
+                          : alert.warning ||
+                            alert.message ||
+                            alert.description ||
+                            JSON.stringify(
+                              alert
+                            )}
 
+                      </div>
+
+                    )
                   )
+
+                ) : (
+
+                  <div className="alert-item">
+                    No active weather alerts for this location.
+                  </div>
+
                 )}
 
               </div>

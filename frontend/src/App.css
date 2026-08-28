@@ -593,3 +593,202 @@ footer {
     height: 44px;
   }
 }
+
+/* =========================================================
+   PHASE 5.1 - WEATHERGPT UI POLISH
+   ========================================================= */
+
+.suggestions button {
+  color: #1f2937 !important;
+  background: #ffffff !important;
+  border: 1px solid #d7dee8 !important;
+  font-weight: 600;
+}
+
+.suggestions button:hover:not(:disabled) {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+.suggestions button:disabled {
+  color: #94a3b8 !important;
+  background: #f8fafc !important;
+}
+
+
+/* =========================================================
+   WEATHER DATA
+   ========================================================= */
+
+.data-card {
+  margin-top: 18px;
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.weather-item {
+  padding: 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.weather-item span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.weather-item strong {
+  display: block;
+  font-size: 17px;
+  color: #0f172a;
+}
+
+
+/* =========================================================
+   INTELLIGENCE
+   ========================================================= */
+
+.intelligence-section {
+  margin-top: 18px;
+}
+
+.intelligence-section > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #1e293b;
+}
+
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.severity {
+  display: inline-flex;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+/* =========================================================
+   FORECAST
+   ========================================================= */
+
+.forecast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.forecast-item {
+  padding: 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.forecast-date {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forecast-date strong {
+  color: #0f172a;
+}
+
+.forecast-date span {
+  color: #64748b;
+}
+
+.forecast-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.forecast-values span {
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   ALERTS
+   ========================================================= */
+
+.alert-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.alert-card h3 {
+  margin-top: 0;
+  color: #9a3412;
+}
+
+.alert-item {
+  padding: 10px 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #7c2d12;
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+  .weather-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-date {
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .forecast-values {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .suggestions {
+    flex-wrap: wrap;
+  }
+
+}
