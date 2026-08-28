@@ -6,10 +6,12 @@ const API_URL = "http://127.0.0.1:8000";
 function App() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [intelligence, setIntelligence] = useState(null);
   const [alerts, setAlerts] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,8 +23,10 @@ function App() {
     }
 
     setLoading(true);
+
     setError("");
     setAnswer("");
+
     setWeather(null);
     setForecast(null);
     setIntelligence(null);
@@ -30,25 +34,31 @@ function App() {
 
     const controller = new AbortController();
 
-    // Prevent the frontend from waiting forever.
     const timeout = setTimeout(() => {
       controller.abort();
     }, 60000);
 
     try {
-      const params = new URLSearchParams({
-        question: trimmedQuestion,
-        session_id: "frontend_user",
-      });
+      const params = new URLSearchParams();
+
+      params.set(
+        "question",
+        trimmedQuestion
+      );
+
+      params.set(
+        "session_id",
+        "frontend_user"
+      );
 
       const response = await fetch(
         `${API_URL}/smart-weather?${params.toString()}`,
         {
           method: "GET",
           headers: {
-            Accept: "application/json",
+            Accept: "application/json"
           },
-          signal: controller.signal,
+          signal: controller.signal
         }
       );
 
@@ -56,126 +66,233 @@ function App() {
 
       const rawText = await response.text();
 
-      console.log("Backend status:", response.status);
-      console.log("Backend response:", rawText);
+      console.log(
+        "WeatherGPT HTTP status:",
+        response.status
+      );
+
+      console.log(
+        "WeatherGPT raw response:",
+        rawText
+      );
 
       if (!response.ok) {
+
+        let errorMessage =
+          `Backend returned HTTP ${response.status}`;
+
+        try {
+          const errorData =
+            JSON.parse(rawText);
+
+          if (errorData.detail) {
+            errorMessage =
+              errorData.detail;
+          }
+
+          if (errorData.message) {
+            errorMessage =
+              errorData.message;
+          }
+
+        } catch {
+          // Keep default message.
+        }
+
         throw new Error(
-          `Backend returned HTTP ${response.status}`
+          errorMessage
         );
       }
 
       let data;
 
       try {
-        data = JSON.parse(rawText);
+
+        data = JSON.parse(
+          rawText
+        );
+
       } catch {
-        // In case the backend ever returns plain text.
-        data = rawText;
+
+        data = {
+          answer: rawText
+        };
       }
 
-      console.log("Parsed WeatherGPT data:", data);
+      console.log(
+        "WeatherGPT parsed response:",
+        data
+      );
 
-      // ----------------------------------------
-      // Plain text response
-      // ----------------------------------------
+      // --------------------------------------------------
+      // LOCATION REQUIRED
+      // --------------------------------------------------
 
-      if (typeof data === "string") {
-        setAnswer(data);
+      if (
+        data.status ===
+        "need_location"
+      ) {
+
+        setAnswer(
+          data.message ||
+          "Please provide a city or location."
+        );
+
         return;
       }
 
-      // ----------------------------------------
-      // AI answer
-      // ----------------------------------------
+      // --------------------------------------------------
+      // ANSWER
+      // --------------------------------------------------
 
       if (data.answer) {
-        setAnswer(String(data.answer));
+
+        setAnswer(
+          String(data.answer)
+        );
+
       } else if (data.message) {
-        setAnswer(String(data.message));
+
+        setAnswer(
+          String(data.message)
+        );
+
       } else if (data.response) {
-        setAnswer(String(data.response));
+
+        setAnswer(
+          String(data.response)
+        );
+
       } else {
-        setAnswer("WeatherGPT received the weather information.");
+
+        setAnswer(
+          "WeatherGPT received the weather information."
+        );
       }
 
-      // ----------------------------------------
-      // Weather data
-      // ----------------------------------------
+      // --------------------------------------------------
+      // WEATHER
+      // --------------------------------------------------
 
       if (data.weather) {
-        setWeather(data.weather);
+        setWeather(
+          data.weather
+        );
       }
 
-      // ----------------------------------------
-      // Forecast data
-      // ----------------------------------------
+      // --------------------------------------------------
+      // FORECAST
+      // --------------------------------------------------
 
       if (data.forecast) {
-        setForecast(data.forecast);
+
+        setForecast(
+          data.forecast
+        );
       }
 
-      // ----------------------------------------
-      // Intelligence
-      // ----------------------------------------
+      // --------------------------------------------------
+      // INTELLIGENCE
+      // --------------------------------------------------
 
       if (data.intelligence) {
-        setIntelligence(data.intelligence);
+
+        setIntelligence(
+          data.intelligence
+        );
       }
 
-      // ----------------------------------------
-      // Alerts
-      // ----------------------------------------
+      // --------------------------------------------------
+      // ALERTS
+      // --------------------------------------------------
 
-      if (Array.isArray(data.alerts)) {
-        setAlerts(data.alerts);
+      if (
+        Array.isArray(
+          data.alerts
+        )
+      ) {
+
+        setAlerts(
+          data.alerts
+        );
+
+      } else if (
+        data.alerts
+      ) {
+
+        setAlerts([
+          data.alerts
+        ]);
       }
 
-      // ----------------------------------------
-      // Some versions may return alert objects
-      // ----------------------------------------
-
-      if (data.alerts && !Array.isArray(data.alerts)) {
-        setAlerts([data.alerts]);
-      }
     } catch (err) {
-      console.error("WeatherGPT request error:", err);
+
+      console.error(
+        "WeatherGPT request error:",
+        err
+      );
 
       clearTimeout(timeout);
 
-      if (err.name === "AbortError") {
+      if (
+        err.name ===
+        "AbortError"
+      ) {
+
         setError(
           "The request took too long. Please try again."
         );
+
       } else if (
         err.message &&
-        err.message.includes("Failed to fetch")
+        err.message.includes(
+          "Failed to fetch"
+        )
       ) {
+
         setError(
-          "Unable to connect to WeatherGPT. Make sure the FastAPI server is running on port 8000."
+          "The browser could not connect to WeatherGPT. Check that FastAPI is running and CORS is enabled."
         );
+
       } else {
+
         setError(
           err.message ||
-            "Something went wrong while contacting WeatherGPT."
+          "Something went wrong while contacting WeatherGPT."
         );
       }
+
     } finally {
+
       setLoading(false);
     }
   };
 
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+
+  const handleKeyDown = (
+    event
+  ) => {
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+
       event.preventDefault();
+
       askWeatherGPT();
     }
   };
 
-  const useSuggestion = (text) => {
+
+  const useSuggestion = (
+    text
+  ) => {
+
     setQuestion(text);
     setError("");
   };
+
 
   return (
     <div className="app">
@@ -189,8 +306,11 @@ function App() {
         </div>
 
         <div className="status">
+
           <span className="status-dot"></span>
+
           AI Weather Assistant
+
         </div>
 
       </header>
@@ -215,14 +335,14 @@ function App() {
           </h1>
 
           <p>
-            Ask anything about weather, forecasts,
-            alerts and conditions.
+            Ask anything about weather,
+            forecasts, alerts and conditions.
           </p>
 
         </section>
 
 
-        {/* CHAT */}
+        {/* CHAT CARD */}
 
         <section className="chat-card">
 
@@ -241,9 +361,10 @@ function App() {
               </h3>
 
               <p>
-                Ask me about the weather in any city.
-                I can provide current conditions,
-                forecasts, recommendations and alerts.
+                Ask me about the weather
+                in any city. I can provide
+                current conditions, forecasts,
+                recommendations and alerts.
               </p>
 
             </div>
@@ -280,209 +401,470 @@ function App() {
 
           {/* ANSWER */}
 
-          {!loading && answer && (
+          {!loading &&
+            answer && (
 
-            <div className="answer-message">
+              <div className="answer-message">
 
-              <div className="bot-avatar">
-                🤖
+                <div className="bot-avatar">
+                  🤖
+                </div>
+
+                <div className="message answer-content">
+
+                  <h3>
+                    WeatherGPT
+                  </h3>
+
+                  <p>
+                    {answer}
+                  </p>
+
+                </div>
+
               </div>
 
-              <div className="message answer-content">
+            )}
+
+
+          {/* CURRENT WEATHER */}
+
+          {!loading &&
+            weather && (
+
+              <div className="data-card">
 
                 <h3>
-                  WeatherGPT
+                  🌡️ Current Weather
+                </h3>
+
+                <div className="weather-grid">
+
+                  {weather.city && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Location
+                      </span>
+
+                      <strong>
+                        {weather.city}
+                        {weather.country
+                          ? `, ${weather.country}`
+                          : ""}
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                  {weather.temperature !==
+                    undefined && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Temperature
+                      </span>
+
+                      <strong>
+                        {weather.temperature}°C
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                  {weather.feels_like !==
+                    undefined && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Feels like
+                      </span>
+
+                      <strong>
+                        {weather.feels_like}°C
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                  {weather.humidity !==
+                    undefined && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Humidity
+                      </span>
+
+                      <strong>
+                        {weather.humidity}%
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                  {weather.wind_speed !==
+                    undefined && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Wind
+                      </span>
+
+                      <strong>
+                        {weather.wind_speed}
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                  {weather.weather && (
+
+                    <div className="weather-item">
+
+                      <span>
+                        Condition
+                      </span>
+
+                      <strong>
+                        {weather.weather}
+                      </strong>
+
+                    </div>
+
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+
+          {/* FORECAST */}
+
+          {!loading &&
+            forecast &&
+            Array.isArray(
+              forecast.forecast
+            ) &&
+            forecast.forecast.length > 0 && (
+
+              <div className="data-card">
+
+                <h3>
+                  📅 Forecast
+                </h3>
+
+                <div className="forecast-list">
+
+                  {forecast.forecast.map(
+                    (item, index) => (
+
+                      <div
+                        className="forecast-item"
+                        key={
+                          `${item.datetime || "forecast"}-${index}`
+                        }
+                      >
+
+                        <div className="forecast-date">
+
+                          <strong>
+                            {item.datetime ||
+                              "Forecast"}
+                          </strong>
+
+                          {item.weather && (
+                            <span>
+                              {item.weather}
+                            </span>
+                          )}
+
+                        </div>
+
+                        <div className="forecast-values">
+
+                          {item.temperature !==
+                            undefined && (
+
+                            <span>
+                              🌡️{" "}
+                              {item.temperature}°C
+                            </span>
+
+                          )}
+
+                          {item.feels_like !==
+                            undefined && (
+
+                            <span>
+                              Feels{" "}
+                              {item.feels_like}°C
+                            </span>
+
+                          )}
+
+                          {item.humidity !==
+                            undefined && (
+
+                            <span>
+                              💧{" "}
+                              {item.humidity}%
+                            </span>
+
+                          )}
+
+                          {item.wind_speed !==
+                            undefined && (
+
+                            <span>
+                              💨{" "}
+                              {item.wind_speed}
+                            </span>
+
+                          )}
+
+                          {item.rain_3h !==
+                            undefined &&
+                            Number(
+                              item.rain_3h
+                            ) > 0 && (
+
+                              <span>
+                                🌧️{" "}
+                                {item.rain_3h} mm
+                              </span>
+
+                            )}
+
+                        </div>
+
+                      </div>
+
+                    )
+                  )}
+
+                </div>
+
+              </div>
+
+            )}
+
+
+          {/* NO FORECAST */}
+
+          {!loading &&
+            forecast &&
+            Array.isArray(
+              forecast.forecast
+            ) &&
+            forecast.forecast.length === 0 && (
+
+              <div className="data-card">
+
+                <h3>
+                  📅 Forecast
                 </h3>
 
                 <p>
-                  {answer}
+                  No forecast entries were
+                  available for the requested
+                  time period.
                 </p>
 
               </div>
 
-            </div>
-
-          )}
-
-
-          {/* WEATHER CARD */}
-
-          {!loading && weather && (
-
-            <div className="data-card">
-
-              <h3>
-                🌡️ Current Weather
-              </h3>
-
-              <div className="weather-grid">
-
-                {weather.temperature !== undefined && (
-                  <div className="weather-item">
-                    <span>Temperature</span>
-                    <strong>
-                      {weather.temperature}°C
-                    </strong>
-                  </div>
-                )}
-
-                {weather.feels_like !== undefined && (
-                  <div className="weather-item">
-                    <span>Feels like</span>
-                    <strong>
-                      {weather.feels_like}°C
-                    </strong>
-                  </div>
-                )}
-
-                {weather.humidity !== undefined && (
-                  <div className="weather-item">
-                    <span>Humidity</span>
-                    <strong>
-                      {weather.humidity}%
-                    </strong>
-                  </div>
-                )}
-
-                {weather.wind_speed !== undefined && (
-                  <div className="weather-item">
-                    <span>Wind</span>
-                    <strong>
-                      {weather.wind_speed}
-                    </strong>
-                  </div>
-                )}
-
-                {weather.weather && (
-                  <div className="weather-item">
-                    <span>Condition</span>
-                    <strong>
-                      {weather.weather}
-                    </strong>
-                  </div>
-                )}
-
-              </div>
-
-            </div>
-
-          )}
+            )}
 
 
           {/* INTELLIGENCE */}
 
-          {!loading && intelligence && (
+          {!loading &&
+            intelligence && (
 
-            <div className="data-card">
+              <div className="data-card">
 
-              <h3>
-                🧠 Weather Intelligence
-              </h3>
+                <h3>
+                  🧠 Weather Intelligence
+                </h3>
 
-              {intelligence.conditions &&
-                intelligence.conditions.length > 0 && (
 
-                  <div className="intelligence-section">
+                {Array.isArray(
+                  intelligence.conditions
+                ) &&
+                  intelligence.conditions.length >
+                    0 && (
 
-                    <strong>
-                      Conditions
-                    </strong>
+                    <div className="intelligence-section">
 
-                    <div className="tag-container">
+                      <strong>
+                        Conditions
+                      </strong>
 
-                      {intelligence.conditions.map(
-                        (condition, index) => (
-                          <span
-                            className="tag"
-                            key={index}
-                          >
-                            {condition}
-                          </span>
-                        )
-                      )}
+                      <div className="tag-container">
+
+                        {intelligence.conditions.map(
+                          (
+                            condition,
+                            index
+                          ) => (
+
+                            <span
+                              className="tag"
+                              key={index}
+                            >
+                              {condition}
+                            </span>
+
+                          )
+                        )}
+
+                      </div>
 
                     </div>
 
-                  </div>
-
-                )}
+                  )}
 
 
-              {intelligence.severity && (
-
-                <div className="intelligence-section">
-
-                  <strong>
-                    Severity
-                  </strong>
-
-                  <span className="severity">
-                    {intelligence.severity}
-                  </span>
-
-                </div>
-
-              )}
-
-
-              {intelligence.recommendations &&
-                intelligence.recommendations.length > 0 && (
+                {intelligence.severity && (
 
                   <div className="intelligence-section">
 
                     <strong>
-                      Recommendations
+                      Severity
                     </strong>
 
-                    <ul>
-
-                      {intelligence.recommendations.map(
-                        (recommendation, index) => (
-                          <li key={index}>
-                            {recommendation}
-                          </li>
-                        )
-                      )}
-
-                    </ul>
+                    <span className="severity">
+                      {intelligence.severity}
+                    </span>
 
                   </div>
 
                 )}
 
-            </div>
 
-          )}
+                {Array.isArray(
+                  intelligence.recommendations
+                ) &&
+                  intelligence.recommendations.length >
+                    0 && (
+
+                    <div className="intelligence-section">
+
+                      <strong>
+                        Recommendations
+                      </strong>
+
+                      <ul>
+
+                        {intelligence.recommendations.map(
+                          (
+                            recommendation,
+                            index
+                          ) => (
+
+                            <li key={index}>
+                              {recommendation}
+                            </li>
+
+                          )
+                        )}
+
+                      </ul>
+
+                    </div>
+
+                  )}
+
+
+                {Array.isArray(
+                  intelligence.warnings
+                ) &&
+                  intelligence.warnings.length >
+                    0 && (
+
+                    <div className="intelligence-section">
+
+                      <strong>
+                        Warnings
+                      </strong>
+
+                      <ul>
+
+                        {intelligence.warnings.map(
+                          (
+                            warning,
+                            index
+                          ) => (
+
+                            <li key={index}>
+                              {warning}
+                            </li>
+
+                          )
+                        )}
+
+                      </ul>
+
+                    </div>
+
+                  )}
+
+              </div>
+
+            )}
 
 
           {/* ALERTS */}
 
-          {!loading && alerts.length > 0 && (
+          {!loading &&
+            alerts.length > 0 && (
 
-            <div className="alert-card">
+              <div className="alert-card">
 
-              <h3>
-                ⚠️ Weather Alerts
-              </h3>
+                <h3>
+                  ⚠️ Weather Alerts
+                </h3>
 
-              {alerts.map((alert, index) => (
+                {alerts.map(
+                  (
+                    alert,
+                    index
+                  ) => (
 
-                <div
-                  className="alert-item"
-                  key={index}
-                >
-                  {typeof alert === "string"
-                    ? alert
-                    : alert.message ||
-                      alert.description ||
-                      JSON.stringify(alert)}
-                </div>
+                    <div
+                      className="alert-item"
+                      key={index}
+                    >
 
-              ))}
+                      {typeof alert ===
+                      "string"
+                        ? alert
+                        : alert.warning ||
+                          alert.message ||
+                          alert.description ||
+                          JSON.stringify(
+                            alert
+                          )}
 
-            </div>
+                    </div>
 
-          )}
+                  )
+                )}
+
+              </div>
+
+            )}
 
 
           {/* ERROR */}
@@ -558,7 +940,9 @@ function App() {
               placeholder="Ask WeatherGPT anything..."
               value={question}
               onChange={(event) =>
-                setQuestion(event.target.value)
+                setQuestion(
+                  event.target.value
+                )
               }
               onKeyDown={handleKeyDown}
               disabled={loading}
@@ -568,11 +952,14 @@ function App() {
               className="send-button"
               onClick={askWeatherGPT}
               disabled={
-                loading || !question.trim()
+                loading ||
+                !question.trim()
               }
               aria-label="Send question"
             >
-              {loading ? "..." : "➤"}
+              {loading
+                ? "..."
+                : "➤"}
             </button>
 
           </div>
@@ -590,7 +977,8 @@ function App() {
       {/* FOOTER */}
 
       <footer>
-        WeatherGPT • Intelligent Weather Forecasting & Alerts
+        WeatherGPT • Intelligent
+        Weather Forecasting & Alerts
       </footer>
 
     </div>

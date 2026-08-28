@@ -1,80 +1,199 @@
 from datetime import datetime, timedelta
 
 
-def filter_forecast(forecast_data, time_period):
+def _parse_datetime(value):
 
-    if not forecast_data or "forecast" not in forecast_data:
+    if not value:
+        return None
+
+    formats = [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S.%f"
+    ]
+
+    for fmt in formats:
+
+        try:
+            return datetime.strptime(
+                value,
+                fmt
+            )
+
+        except ValueError:
+            continue
+
+    return None
+
+
+def filter_forecast(
+    forecast_data,
+    time_period
+):
+
+    if (
+        not forecast_data
+        or "forecast" not in forecast_data
+    ):
         return forecast_data
 
-    forecast_list = forecast_data["forecast"]
+    forecast_list = forecast_data.get(
+        "forecast",
+        []
+    )
 
-    today = datetime.now().date()
+    if not forecast_list:
+        return {
+            "location": forecast_data.get(
+                "location"
+            ),
+            "forecast": []
+        }
 
-    filtered = []
+    parsed_items = []
 
     for item in forecast_list:
 
-        try:
-            forecast_datetime = datetime.strptime(
-                item["datetime"],
-                "%Y-%m-%d %H:%M:%S"
+        forecast_datetime = _parse_datetime(
+            item.get("datetime")
+        )
+
+        if forecast_datetime is not None:
+
+            parsed_items.append(
+                (
+                    forecast_datetime,
+                    item
+                )
             )
 
-            forecast_date = forecast_datetime.date()
+    if not parsed_items:
 
-        except (ValueError, TypeError, KeyError):
-            continue
+        return {
+            "location": forecast_data.get(
+                "location"
+            ),
+            "forecast": []
+        }
 
-        # NOW
-        if time_period == "NOW":
+    # The forecast timestamps from OpenWeather's
+    # 5-day/3-hour forecast are already formatted
+    # as local city forecast times by the API.
+    #
+    # Therefore we use the dates represented by
+    # those timestamps rather than trying to convert
+    # them using the computer's timezone.
 
-            if forecast_datetime >= datetime.now():
-                filtered.append(item)
-                break
+    today = datetime.now().date()
 
-        # TODAY
-        elif time_period == "TODAY":
+    # -----------------------------------------------------
+    # NOW
+    # -----------------------------------------------------
 
-            if forecast_date == today:
-                filtered.append(item)
+    if time_period == "NOW":
 
-        # TOMORROW
-        elif time_period == "TOMORROW":
+        now_item = min(
+            parsed_items,
+            key=lambda pair: abs(
+                (pair[0] - datetime.now()).total_seconds()
+            )
+        )
 
-            tomorrow = today + timedelta(days=1)
+        filtered = [now_item[1]]
 
-            if forecast_date == tomorrow:
-                filtered.append(item)
+    # -----------------------------------------------------
+    # TODAY
+    # -----------------------------------------------------
 
-        # THIS WEEK
-        elif time_period == "THIS_WEEK":
+    elif time_period == "TODAY":
 
-            if today <= forecast_date <= today + timedelta(days=6):
-                filtered.append(item)
+        filtered = [
+            item
+            for dt, item in parsed_items
+            if dt.date() == today
+        ]
 
-        # THIS WEEKEND
-        elif time_period == "THIS_WEEKEND":
+    # -----------------------------------------------------
+    # TOMORROW
+    # -----------------------------------------------------
 
-            days_until_saturday = (5 - today.weekday()) % 7
+    elif time_period == "TOMORROW":
 
-            saturday = today + timedelta(days=days_until_saturday)
-            sunday = saturday + timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
 
-            if saturday <= forecast_date <= sunday:
-                filtered.append(item)
+        filtered = [
+            item
+            for dt, item in parsed_items
+            if dt.date() == tomorrow
+        ]
 
-        # FUTURE
-        elif time_period == "FUTURE":
+    # -----------------------------------------------------
+    # THIS WEEK
+    # -----------------------------------------------------
 
-            if forecast_date > today:
-                filtered.append(item)
+    elif time_period == "THIS_WEEK":
 
-        # UNKNOWN
-        else:
+        end_date = today + timedelta(days=6)
 
-            filtered.append(item)
+        filtered = [
+            item
+            for dt, item in parsed_items
+            if today <= dt.date() <= end_date
+        ]
+
+    # -----------------------------------------------------
+    # THIS WEEKEND
+    # -----------------------------------------------------
+
+    elif time_period == "THIS_WEEKEND":
+
+        days_until_saturday = (
+            5 - today.weekday()
+        ) % 7
+
+        saturday = (
+            today
+            + timedelta(
+                days=days_until_saturday
+            )
+        )
+
+        sunday = saturday + timedelta(
+            days=1
+        )
+
+        filtered = [
+            item
+            for dt, item in parsed_items
+            if saturday <= dt.date() <= sunday
+        ]
+
+    # -----------------------------------------------------
+    # FUTURE
+    # -----------------------------------------------------
+
+    elif time_period == "FUTURE":
+
+        filtered = [
+            item
+            for dt, item in parsed_items
+            if dt.date() > today
+        ]
+
+    # -----------------------------------------------------
+    # UNKNOWN
+    # -----------------------------------------------------
+
+    else:
+
+        filtered = [
+            item
+            for _, item in parsed_items
+        ]
 
     return {
-        "location": forecast_data.get("location"),
+        "location": forecast_data.get(
+            "location"
+        ),
         "forecast": filtered
     }

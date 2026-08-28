@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.condition_service import (
     analyze_conditions,
@@ -8,6 +9,7 @@ from backend.condition_service import (
 from backend.severity_service import determine_severity
 from backend.recommendation_service import generate_recommendations
 from backend.alert_service import generate_warnings
+
 from backend.alert_manager import (
     create_alert,
     get_alerts,
@@ -31,8 +33,32 @@ from backend.forecast_service import get_forecast
 from backend.intelligence_service import analyze_weather
 
 
+# =========================================================
+# APP
+# =========================================================
+
 app = FastAPI(title="WeatherGPT API")
 
+
+# =========================================================
+# CORS
+# =========================================================
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# =========================================================
+# HOME
+# =========================================================
 
 @app.get("/")
 def home():
@@ -41,15 +67,27 @@ def home():
     }
 
 
+# =========================================================
+# CURRENT WEATHER
+# =========================================================
+
 @app.get("/weather/{city}")
 def weather(city: str):
     return get_weather(city)
 
 
+# =========================================================
+# LOCATION
+# =========================================================
+
 @app.get("/location/{city}")
 def location(city: str):
     return get_location(city)
 
+
+# =========================================================
+# FORECAST
+# =========================================================
 
 @app.get("/forecast/{city}")
 def forecast(city: str):
@@ -62,8 +100,15 @@ def forecast(city: str):
     latitude = location_data["latitude"]
     longitude = location_data["longitude"]
 
-    return get_forecast(latitude, longitude)
+    return get_forecast(
+        latitude,
+        longitude
+    )
 
+
+# =========================================================
+# WEATHER ANALYSIS
+# =========================================================
 
 @app.get("/weather-analysis/{city}")
 def weather_analysis(city: str):
@@ -87,6 +132,10 @@ def weather_analysis(city: str):
     }
 
 
+# =========================================================
+# AI TEST
+# =========================================================
+
 @app.get("/ask-ai")
 def ask_ai_test(question: str):
 
@@ -96,6 +145,12 @@ def ask_ai_test(question: str):
         "question": question,
         "answer": answer
     }
+
+
+# =========================================================
+# ALERTS
+# =========================================================
+
 @app.get("/alerts")
 def alerts(
     city: str = None,
@@ -125,7 +180,6 @@ def resolve_alert_endpoint(alert_id: int):
     alert = resolve_alert(alert_id)
 
     if alert is None:
-
         return {
             "error": "Alert not found."
         }
@@ -141,41 +195,82 @@ def delete_alerts():
 
     return clear_alerts()
 
+
+# =========================================================
+# SMART WEATHER
+# =========================================================
+
 @app.get("/smart-weather")
 def smart_weather(
     question: str,
     session_id: str = "default"
 ):
 
-    # Step 1: Get previous conversation information
+    # -----------------------------------------------------
+    # STEP 1: MEMORY
+    # -----------------------------------------------------
+
     memory = get_conversation(session_id)
 
-    # Step 2: Understand current question using previous context
+    # -----------------------------------------------------
+    # STEP 2: UNDERSTAND QUESTION
+    # -----------------------------------------------------
+
     understanding = understand_weather_question(
         question,
         memory
     )
 
-    city = understanding["city"]
-    intent = understanding["intent"]
-    time_period = understanding["time"]
+    # Safety check
+    if not isinstance(understanding, dict):
+        return {
+            "status": "error",
+            "message": "Unable to understand the weather question."
+        }
 
-    # Step 3: Use previous city if current question has no city
+    city = understanding.get(
+        "city",
+        "UNKNOWN"
+    )
+
+    intent = understanding.get(
+        "intent",
+        "GENERAL_WEATHER"
+    )
+
+    time_period = understanding.get(
+        "time",
+        "UNKNOWN"
+    )
+
+    understanding_error = understanding.get("error")
+
+    # -----------------------------------------------------
+    # STEP 3: USE MEMORY CITY
+    # -----------------------------------------------------
+
     if city == "UNKNOWN":
 
-        if "city" in memory:
+        if memory.get("city"):
             city = memory["city"]
 
         else:
+
             return {
                 "status": "need_location",
                 "question": question,
                 "detected_intent": intent,
                 "detected_time": time_period,
-                "message": "Which city or location would you like me to check?"
+                "message": (
+                    "Which city or location would you like "
+                    "me to check?"
+                )
             }
 
-    # Step 4: Save conversation
+    # -----------------------------------------------------
+    # STEP 4: SAVE MEMORY
+    # -----------------------------------------------------
+
     save_conversation(
         session_id,
         city=city,
@@ -184,13 +279,19 @@ def smart_weather(
         last_question=question
     )
 
-    # Step 5: Decide required data
+    # -----------------------------------------------------
+    # STEP 5: DECIDE DATA SOURCE
+    # -----------------------------------------------------
+
     data_source = decide_data_source(intent)
 
     weather_data = None
     forecast_data = None
 
-    # Step 6: Current weather
+    # -----------------------------------------------------
+    # STEP 6: CURRENT WEATHER
+    # -----------------------------------------------------
+
     if data_source == "current":
 
         weather_data = get_weather(city)
@@ -198,7 +299,10 @@ def smart_weather(
         if "error" in weather_data:
             return weather_data
 
-    # Step 7: Forecast
+    # -----------------------------------------------------
+    # STEP 7: FORECAST
+    # -----------------------------------------------------
+
     elif data_source == "forecast":
 
         location_data = get_location(city)
@@ -219,7 +323,10 @@ def smart_weather(
             time_period
         )
 
-    # Step 8: Current weather + forecast
+    # -----------------------------------------------------
+    # STEP 8: BOTH
+    # -----------------------------------------------------
+
     elif data_source == "both":
 
         weather_data = get_weather(city)
@@ -245,22 +352,31 @@ def smart_weather(
             time_period
         )
 
-    # Step 9: Initialize intelligence
+    # -----------------------------------------------------
+    # STEP 9: INTELLIGENCE
+    # -----------------------------------------------------
+
     intelligence = {
         "conditions": [],
-        "severity": "unknown",
+        "severity": "normal",
         "recommendations": [],
         "warnings": []
     }
 
-    # Step 10: Current weather intelligence
+    # -----------------------------------------------------
+    # CURRENT INTELLIGENCE
+    # -----------------------------------------------------
+
     if weather_data and not forecast_data:
 
         condition_result = analyze_conditions(
             weather_data
         )
 
-        conditions = condition_result["conditions"]
+        conditions = condition_result.get(
+            "conditions",
+            []
+        )
 
         severity = determine_severity(
             conditions
@@ -282,14 +398,20 @@ def smart_weather(
             "warnings": warnings
         }
 
-    # Step 11: Forecast intelligence
+    # -----------------------------------------------------
+    # FORECAST INTELLIGENCE
+    # -----------------------------------------------------
+
     elif forecast_data and not weather_data:
 
         condition_result = analyze_forecast_conditions(
             forecast_data
         )
 
-        conditions = condition_result["conditions"]
+        conditions = condition_result.get(
+            "conditions",
+            []
+        )
 
         severity = determine_severity(
             conditions
@@ -311,7 +433,10 @@ def smart_weather(
             "warnings": warnings
         }
 
-    # Step 12: Combined current + forecast intelligence
+    # -----------------------------------------------------
+    # COMBINED INTELLIGENCE
+    # -----------------------------------------------------
+
     elif weather_data and forecast_data:
 
         current_result = analyze_conditions(
@@ -322,13 +447,20 @@ def smart_weather(
             forecast_data
         )
 
-        current_conditions = current_result["conditions"]
-        forecast_conditions = forecast_result["conditions"]
+        current_conditions = current_result.get(
+            "conditions",
+            []
+        )
 
-        # Combine conditions and remove duplicates
+        forecast_conditions = forecast_result.get(
+            "conditions",
+            []
+        )
+
         conditions = list(
             dict.fromkeys(
-                current_conditions + forecast_conditions
+                current_conditions +
+                forecast_conditions
             )
         )
 
@@ -352,7 +484,10 @@ def smart_weather(
             "warnings": warnings
         }
 
-    # Step 13: Create alerts from generated warnings
+    # -----------------------------------------------------
+    # STEP 10: CREATE ALERTS
+    # -----------------------------------------------------
+
     created_alerts = []
 
     for warning in intelligence["warnings"]:
@@ -366,24 +501,42 @@ def smart_weather(
 
         created_alerts.append(alert)
 
-    # Step 14: Generate final AI answer
+    # -----------------------------------------------------
+    # STEP 11: FINAL AI ANSWER
+    # -----------------------------------------------------
+
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
         forecast_data=forecast_data
     )
 
-    # Step 15: Return complete response
-    return {
+    # -----------------------------------------------------
+    # STEP 12: FINAL RESPONSE
+    # -----------------------------------------------------
+
+    response = {
+        "status": "success",
         "question": question,
         "session_id": session_id,
+
         "detected_city": city,
         "detected_intent": intent,
         "detected_time": time_period,
+
         "data_source": data_source,
+
         "weather": weather_data,
         "forecast": forecast_data,
+
         "intelligence": intelligence,
+
         "alerts": created_alerts,
+
         "answer": answer
     }
+
+    if understanding_error:
+        response["understanding_warning"] = understanding_error
+
+    return response
