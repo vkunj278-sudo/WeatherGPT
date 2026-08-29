@@ -2,7 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = "http://127.0.0.1:8000";
+const formatWeatherText = (value) => {
+  if (!value) return "";
 
+  return String(value)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 function App() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -599,7 +608,7 @@ function App() {
                       </span>
 
                       <strong>
-                        {weather.weather}
+                        {formatWeatherText(weather.weather)}
                       </strong>
 
                     </div>
@@ -649,7 +658,7 @@ function App() {
 
                           {item.weather && (
                             <span>
-                              {item.weather}
+                              {formatWeatherText(item.weather)}
                             </span>
                           )}
 
@@ -775,7 +784,7 @@ function App() {
                               className="tag"
                               key={index}
                             >
-                              {condition}
+                              {formatWeatherText(condition)}
                             </span>
 
                           )
@@ -797,7 +806,7 @@ function App() {
                     </strong>
 
                     <span className="severity">
-                      {intelligence.severity}
+                      {formatWeatherText(intelligence.severity)}
                     </span>
 
                   </div>

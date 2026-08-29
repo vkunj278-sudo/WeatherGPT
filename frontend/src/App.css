@@ -283,9 +283,8 @@ input {
 
 .tag-container {
   display: flex;
-
   flex-wrap: wrap;
-
+  justify-content: center;
   gap: 8px;
 }
 
@@ -712,10 +711,22 @@ footer {
 }
 
 .forecast-date {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.forecast-date strong {
+  color: #0f172a;
+  text-align: left;
+}
+
+.forecast-date span {
+  color: #64748b;
+  text-align: center;
+  grid-column: 2;
 }
 
 .forecast-date strong {
