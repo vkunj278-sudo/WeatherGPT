@@ -6,6 +6,7 @@ const API_URL = "http://127.0.0.1:8000";
 function App() {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
 
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState(null);
@@ -147,13 +148,29 @@ function App() {
       // --------------------------------------------------
 
       if (data.answer) {
-        setAnswer(
-          String(data.answer)
-        );
+        const newAnswer = String(data.answer);
+
+        setAnswer(newAnswer);
+
+        setChatHistory((previousHistory) => [
+          ...previousHistory,
+          {
+            question: trimmedQuestion,
+            answer: newAnswer,
+          },
+        ]);
       } else if (data.message) {
-        setAnswer(
-          String(data.message)
-        );
+        const newAnswer = String(data.message);
+
+        setAnswer(newAnswer);
+
+        setChatHistory((previousHistory) => [
+          ...previousHistory,
+          {
+            question: trimmedQuestion,
+            answer: newAnswer,
+          },
+        ]);
       } else if (data.response) {
         setAnswer(
           String(data.response)
