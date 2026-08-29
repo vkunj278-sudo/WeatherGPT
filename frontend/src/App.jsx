@@ -385,7 +385,14 @@ function App() {
                 </h3>
 
                 <p>
-                  Checking the weather...
+                  <div className="loading-state">
+                    <span>Checking the weather</span>
+                    <span className="loading-dots">
+                      <span>.</span>
+                      <span>.</span>
+                      <span>.</span>
+                    </span>
+                  </div>
                 </p>
 
               </div>
