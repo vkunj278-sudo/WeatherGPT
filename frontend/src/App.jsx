@@ -246,6 +246,7 @@ function App() {
       }
     } finally {
       setLoading(false);
+      setQuestion("");
     }
   };
 
