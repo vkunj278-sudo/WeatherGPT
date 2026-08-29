@@ -1,6 +1,6 @@
 import os
 import re
-
+from openai import OpenAI
 from dotenv import load_dotenv
 from google import genai
 
@@ -12,6 +12,15 @@ from google import genai
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+deepseek_client = None
+
+if DEEPSEEK_API_KEY:
+    deepseek_client = OpenAI(
+        api_key=DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com"
+    )
 
 MODEL_NAME = "gemini-3.6-flash"
 
@@ -78,6 +87,39 @@ def gemini_error_message(error):
 # =========================================================
 # AI ANSWER
 # =========================================================
+def ask_deepseek(prompt):
+
+    if deepseek_client is None:
+        return None
+
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-v4-flash",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are WeatherGPT, a concise and reliable "
+                        "weather assistant. Use only the weather data "
+                        "provided in the prompt and never invent weather facts."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            thinking={
+                "type": "disabled"
+            },
+            max_tokens=500
+        )
+
+        return response.choices[0].message.content
+
+    except Exception as e:
+        print("DeepSeek error:", e)
+        return None
 
 def ask_ai(
     question,
@@ -158,9 +200,30 @@ Answer naturally.
             "but could not generate a readable answer."
         )
 
-    except Exception as error:
+    except Exception as e:
 
-        return gemini_error_message(error)
+        error_text = str(e)
+
+        if (
+            "429" in error_text
+            or "RESOURCE_EXHAUSTED" in error_text
+            or "503" in error_text
+            or "UNAVAILABLE" in error_text
+        ):
+
+            deepseek_answer = ask_deepseek(prompt)
+
+            if deepseek_answer:
+                return deepseek_answer
+
+            return (
+                "The AI services are temporarily unavailable. "
+                "Please try again later."
+            )
+
+        return (
+            "Sorry, I could not generate an AI response right now."
+        )
 
 
 # =========================================================
