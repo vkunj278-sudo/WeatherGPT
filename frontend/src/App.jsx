@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const API_URL = "http://127.0.0.1:8000";
@@ -16,6 +16,7 @@ function App() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const chatEndRef = useRef(null);
 
   const askWeatherGPT = async () => {
     const trimmedQuestion = question.trim();
@@ -266,7 +267,12 @@ function App() {
       setQuestion("");
     }
   };
-
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [chatHistory, loading, answer]);
 
   const handleKeyDown = (
     event
@@ -384,16 +390,14 @@ function App() {
                   WeatherGPT
                 </h3>
 
-                <p>
-                  <div className="loading-state">
-                    <span>Checking the weather</span>
-                    <span className="loading-dots">
-                      <span>.</span>
-                      <span>.</span>
-                      <span>.</span>
-                    </span>
-                  </div>
-                </p>
+                <div className="loading-state">
+                  <span>Checking the weather</span>
+                  <span className="loading-dots">
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                  </span>
+                </div>
 
               </div>
 
@@ -1026,6 +1030,7 @@ function App() {
           <div className="input-hint">
             Press Enter to ask WeatherGPT
           </div>
+          <div ref={chatEndRef} />
 
         </section>
 
