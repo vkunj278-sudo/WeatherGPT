@@ -24,7 +24,7 @@ function App() {
     }
 
     setLoading(true);
-
+    setQuestion("");
     setError("");
     setAnswer("");
 
@@ -394,8 +394,8 @@ function App() {
                     WeatherGPT
                   </h3>
 
-                  <p>
-                    {answer}
+                  <p style={{ whiteSpace: "pre-wrap" }}>
+                    {String(answer).replace(/\*\*/g, "")}
                   </p>
 
                 </div>
