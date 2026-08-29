@@ -421,7 +421,63 @@ function App() {
               </div>
 
             )}
+          {/* CHAT HISTORY */}
 
+          {chatHistory.length > 0 && (
+
+            <div className="chat-history">
+
+              {chatHistory.map((chat, index) => (
+
+                <div
+                  className="history-item"
+                  key={index}
+                >
+
+                  <div className="user-message">
+
+                    <div className="user-avatar">
+                      👤
+                    </div>
+
+                    <div className="message">
+
+                      <p>
+                        {chat.question}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+
+                  <div className="answer-message">
+
+                    <div className="bot-avatar">
+                      🤖
+                    </div>
+
+                    <div className="message answer-content">
+
+                      <h3>
+                        WeatherGPT
+                      </h3>
+
+                      <p style={{ whiteSpace: "pre-wrap" }}>
+                        {String(chat.answer).replace(/\*\*/g, "")}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          )}
 
           {/* CURRENT WEATHER */}
 
