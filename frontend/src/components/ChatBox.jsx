@@ -16,7 +16,11 @@ import {
   MapPin,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "/api";
+// Local development uses the FastAPI server directly.
+// Production uses the Vercel /api route so the browser never tries to call localhost.
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? "http://127.0.0.1:8000" : "/api");
 
 function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) {
   const [message, setMessage] = useState("");
@@ -74,7 +78,13 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
       ? question
       : `${question} in ${locationName}`;
 
-    const url = new URL(`${API_URL}/smart-weather`);
+    const apiPath = `${API_URL.replace(/\\/$/, "")}/smart-weather`;
+
+    // `new URL()` needs an absolute base in the browser. In production
+    // `/api` is intentionally relative so it works on any Vercel domain.
+    const url = apiPath.startsWith("http")
+      ? new URL(apiPath)
+      : new URL(apiPath, window.location.origin);
     url.searchParams.set("question", finalQuestion);
     url.searchParams.set("session_id", sessionId);
 

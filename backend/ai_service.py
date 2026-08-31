@@ -352,7 +352,7 @@ CITY_ALIASES = {
 
 def normalize_city(city):
     city = re.sub(r"^the\\s+", "", (city or "").strip(), flags=re.IGNORECASE)
-    city = re.sub(r"\\s+", " ", city).strip(" .,'\"")
+    city = re.sub(r"\s+", " ", city).strip(" .,'\"")
 
     alias = CITY_ALIASES.get(city.lower())
     if alias:
@@ -368,36 +368,39 @@ def extract_city(question):
     text = question.strip()
     lower_text = text.lower()
 
-    # Correct common misspellings before the general pattern.
+    # Common spelling mistakes.
     for wrong, correct in CITY_ALIASES.items():
-        if re.search(r"\\b" + re.escape(wrong) + r"\\b", lower_text):
+        if re.search(r"\b" + re.escape(wrong) + r"\b", lower_text):
             return correct
 
+    # Explicit location phrases: "in Surat", "for Ahmedabad", etc.
     pattern = re.search(
-        r"\\b(?:in|at|for|near)\\s+(?:the\\s+)?"
+        r"\b(?:in|at|for|near)\s+(?:the\s+)?"
         r"([A-Za-z][A-Za-z .'-]{1,60}?)"
-        r"(?:\\?|$|,|\\s+(?:tomorrow|today|this|now|currently|"
-        r"weather|forecast|temperature|rain|humidity|wind)\\b)",
+        r"(?:\?|$|,|\s+(?:tomorrow|today|tonight|this|now|currently|"
+        r"weather|forecast|temperature|rain|humidity|wind|will|is|are|"
+        r"what|how)\b)",
         text,
         re.IGNORECASE,
     )
 
     if pattern:
-        city = normalize_city(pattern.group(1))
-        if city != "UNKNOWN":
-            return city
+        candidate = normalize_city(pattern.group(1))
+        if candidate != "UNKNOWN":
+            return candidate
 
+    # Direct city input such as "Surat" or "Ahmedabad".
     known_cities = [
         "Ahmedabad", "Mumbai", "Delhi", "New Delhi", "Bengaluru",
         "Bangalore", "Chennai", "Hyderabad", "Pune", "Kolkata",
         "Surat", "Vadodara", "Rajkot", "Jaipur", "Lucknow", "Kanpur",
         "Indore", "Bhopal", "Nagpur", "Patna", "Ranchi", "Noida",
         "Gurugram", "Chandigarh", "Amritsar", "Nashik", "Thane",
-        "Mysuru", "Mysore",
+        "Mysuru", "Mysore", "Bhavnagar",
     ]
 
     for city in sorted(known_cities, key=len, reverse=True):
-        if re.search(r"\\b" + re.escape(city.lower()) + r"\\b", lower_text):
+        if re.search(r"\b" + re.escape(city.lower()) + r"\b", lower_text):
             return city
 
     return "UNKNOWN"
