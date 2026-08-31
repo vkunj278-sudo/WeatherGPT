@@ -51,23 +51,6 @@ app.add_middleware(
 )
 
 
-
-# =========================================================
-# CORS
-# =========================================================
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
 # =========================================================
 # HOME
 # =========================================================
@@ -76,6 +59,28 @@ app.add_middleware(
 def home():
     return {
         "message": "WeatherGPT API is running!"
+    }
+
+
+# =========================================================
+# HEALTH
+# =========================================================
+
+@app.get("/health")
+def health():
+    from backend.ai_service import (
+        API_KEY,
+        DEEPSEEK_API_KEY,
+        MODEL_NAME,
+        DEEPSEEK_MODEL,
+    )
+
+    return {
+        "status": "healthy",
+        "gemini_configured": bool(API_KEY),
+        "deepseek_configured": bool(DEEPSEEK_API_KEY),
+        "gemini_model": MODEL_NAME,
+        "deepseek_model": DEEPSEEK_MODEL,
     }
 
 
@@ -520,7 +525,8 @@ def smart_weather(
     answer = ask_ai(
         question=question,
         weather_data=weather_data,
-        forecast_data=forecast_data
+        forecast_data=forecast_data,
+        intelligence=intelligence
     )
 
     # -----------------------------------------------------

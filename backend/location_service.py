@@ -16,7 +16,7 @@ def get_location(city):
         "appid": API_KEY
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=15)
 
     if response.status_code != 200:
         return {
