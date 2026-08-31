@@ -1067,3 +1067,239 @@ footer {
   }
 }
 
+
+
+/* =========================================================
+   WEATHERGPT FINAL UI POLISH
+   Minimal override: keeps existing component structure.
+   ========================================================= */
+
+:root {
+  --wg-bg: #f6f8fc;
+  --wg-surface: rgba(255, 255, 255, 0.94);
+  --wg-border: #e5eaf2;
+  --wg-text: #0f172a;
+  --wg-muted: #64748b;
+  --wg-primary: #2563eb;
+  --wg-primary-dark: #1d4ed8;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(37, 99, 235, 0.08), transparent 28rem),
+    radial-gradient(circle at 90% 10%, rgba(14, 165, 233, 0.07), transparent 24rem),
+    var(--wg-bg);
+  color: var(--wg-text);
+}
+
+.app {
+  min-height: 100vh;
+}
+
+.header {
+  height: 72px;
+  padding: 0 clamp(20px, 7vw, 96px);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--wg-border);
+}
+
+.logo {
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  color: var(--wg-text);
+}
+
+.status {
+  color: var(--wg-muted);
+  font-weight: 500;
+}
+
+.status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.10);
+}
+
+.main {
+  max-width: 1040px;
+  padding: 54px 20px 34px;
+}
+
+.hero {
+  margin-bottom: 34px;
+}
+
+.hero-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid var(--wg-border);
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  font-size: 42px;
+}
+
+.hero h1 {
+  color: var(--wg-text);
+  font-size: clamp(34px, 5vw, 52px);
+  font-weight: 750;
+  letter-spacing: -1.8px;
+}
+
+.hero p {
+  max-width: 650px;
+  margin: 0 auto;
+  color: var(--wg-muted);
+}
+
+.chat-card {
+  padding: clamp(18px, 4vw, 32px);
+  background: var(--wg-surface);
+  border: 1px solid var(--wg-border);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.09);
+  backdrop-filter: blur(12px);
+}
+
+.welcome-message {
+  padding: 4px 4px 22px;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.message h3 {
+  color: var(--wg-text);
+}
+
+.message p {
+  color: var(--wg-muted);
+}
+
+.bot-avatar,
+.user-avatar {
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.answer-message {
+  background: #f8fafc;
+  border-color: #e6ebf2;
+}
+
+.answer-content p {
+  color: #334155 !important;
+}
+
+.data-card {
+  background: #f8fafc;
+  border-color: #e5eaf2;
+}
+
+.data-card h3 {
+  color: var(--wg-text);
+}
+
+.weather-item,
+.forecast-item {
+  border-color: #e5eaf2;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.weather-item:hover,
+.forecast-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.weather-item strong {
+  color: var(--wg-text);
+}
+
+.suggestions {
+  margin-top: 8px;
+}
+
+.suggestions button {
+  border-radius: 999px !important;
+  padding: 10px 15px;
+  font-weight: 600;
+  transition: all 0.18s ease;
+}
+
+.suggestions button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
+}
+
+.input-area {
+  margin-top: 6px;
+  padding: 7px;
+  border-radius: 17px;
+  border-color: #dbe2eb;
+  box-shadow: 0 7px 22px rgba(15, 23, 42, 0.05);
+}
+
+.input-area:focus-within {
+  border-color: #93c5fd;
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.10),
+    0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.input-area input {
+  color: var(--wg-text);
+}
+
+.input-area input::placeholder {
+  color: #94a3b8;
+}
+
+.send-button {
+  background: var(--wg-primary);
+  border-radius: 12px;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.22);
+}
+
+.send-button:hover:not(:disabled) {
+  background: var(--wg-primary-dark);
+  transform: translateY(-1px);
+}
+
+.error-message {
+  background: #fff7f7;
+  border-color: #fecaca;
+}
+
+.chat-history {
+  margin-top: 22px;
+}
+
+.user-message .message p {
+  background: var(--wg-primary);
+  box-shadow: 0 5px 15px rgba(37, 99, 235, 0.16);
+}
+
+footer {
+  color: #94a3b8;
+  padding: 24px 20px 30px;
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding-top: 36px;
+  }
+
+  .chat-card {
+    border-radius: 20px;
+  }
+
+  .hero h1 {
+    letter-spacing: -1px;
+  }
+
+  .header {
+    height: 64px;
+  }
+}

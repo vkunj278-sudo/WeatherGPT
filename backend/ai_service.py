@@ -22,7 +22,7 @@ if DEEPSEEK_API_KEY:
         base_url="https://api.deepseek.com"
     )
 
-MODEL_NAME = "gemini-3.6-flash"
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-3.7-flash")
 
 _client = None
 
