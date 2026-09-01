@@ -131,124 +131,252 @@ def _format_value(value):
     return str(value)
 
 
-def _deterministic_weather_answer(question, weather_data=None, forecast_data=None):
-    """Safe final fallback using only retrieved weather data."""
+def _condition_label(condition):
+    if not condition:
+        return "Not available"
+    return str(condition).replace("_", " ").strip().capitalize()
+
+
+def _severity_label(severity):
+    return {
+        "severe": "High",
+        "moderate": "Moderate",
+        "normal": "Normal",
+        "unknown": "Unknown",
+    }.get(str(severity).lower(), str(severity).capitalize())
+
+
+def _smart_recommendation(intelligence):
+    if not intelligence:
+        return None
+
+    recommendations = intelligence.get("recommendations") or []
+    warnings = intelligence.get("warnings") or []
+
+    if warnings:
+        return f"⚠️ Weather alert: {warnings[0]}"
+
+    if recommendations:
+        return f"💡 WeatherGPT recommendation: {recommendations[0]}"
+
+    return None
+
+
+def _deterministic_weather_answer(
+    question,
+    weather_data=None,
+    forecast_data=None,
+    intelligence=None,
+):
+    """
+    Fast, judge-friendly response using verified live weather data.
+
+    This deliberately avoids an LLM for straightforward factual questions,
+    reducing latency while still giving a useful, human-readable explanation.
+    """
+    q = (question or "").lower()
+
+    # ---------------------------------------------------------
+    # FORECAST RESPONSE
+    # ---------------------------------------------------------
+    if forecast_data and forecast_data.get("forecast"):
+        items = forecast_data["forecast"]
+        location = forecast_data.get("location") or (
+            weather_data.get("city") if weather_data else "the requested location"
+        )
+
+        temps = [
+            item.get("temperature")
+            for item in items
+            if item.get("temperature") is not None
+        ]
+        rain_values = [
+            float(item.get("rain_3h") or 0)
+            for item in items
+        ]
+
+        rainy_items = [
+            item for item in items
+            if float(item.get("rain_3h") or 0) > 0
+            or any(
+                word in str(item.get("weather", "")).lower()
+                for word in ("rain", "drizzle", "shower", "thunderstorm")
+            )
+        ]
+
+        if "rain" in q or "umbrella" in q:
+            if rainy_items:
+                first = rainy_items[0]
+                when = first.get("datetime", "the forecast period")
+                amount = float(first.get("rain_3h") or 0)
+                answer = (
+                    f"🌧️ Rain outlook for {location}\n\n"
+                    f"Rain is indicated around {when}."
+                )
+                if amount > 0:
+                    answer += f" The forecast shows about {_format_value(amount)} mm of rain in that 3-hour period."
+                answer += "\n\n💡 Keep an umbrella handy and take care on wet roads."
+                return answer
+
+            return (
+                f"🌤️ Rain outlook for {location}\n\n"
+                "No measurable rainfall is indicated in the available forecast period. "
+                "Conditions may still change, so keep an eye on the latest forecast."
+            )
+
+        if temps:
+            min_temp = min(temps)
+            max_temp = max(temps)
+
+            # Representative/latest forecast entry for a concise summary.
+            representative = items[0]
+            condition = _condition_label(representative.get("weather"))
+
+            answer = (
+                f"📅 Forecast for {location}\n\n"
+                f"🌡️ Temperature range: {_format_value(min_temp)}°C to {_format_value(max_temp)}°C\n"
+                f"☁️ Expected conditions: {condition}\n"
+            )
+
+            if rainy_items:
+                answer += f"🌧️ Rain: Possible during {len(rainy_items)} forecast period(s)\n"
+            else:
+                answer += "🌧️ Rain: No rainfall indicated in the available periods\n"
+
+            answer += (
+                "\nWeatherGPT insight: "
+                "The forecast summary is based on the latest retrieved forecast data."
+            )
+
+            recommendation = _smart_recommendation(intelligence)
+            if recommendation:
+                answer += f"\n\n{recommendation}"
+
+            return answer
+
+    # ---------------------------------------------------------
+    # CURRENT WEATHER RESPONSE
+    # ---------------------------------------------------------
     if weather_data:
         city = weather_data.get("city") or weather_data.get("location") or "the requested location"
         country = weather_data.get("country")
         location = f"{city}, {country}" if country else city
 
-        parts = [f"Current weather in {location}:"]
-
         temperature = weather_data.get("temperature")
         feels_like = weather_data.get("feels_like")
         humidity = weather_data.get("humidity")
         wind_speed = weather_data.get("wind_speed")
-        condition = weather_data.get("weather") or weather_data.get("condition")
+        condition = _condition_label(
+            weather_data.get("weather") or weather_data.get("condition")
+        )
 
-        if temperature is not None:
-            parts.append(f"Temperature: {_format_value(temperature)}°C.")
-        if feels_like is not None:
-            parts.append(f"Feels like: {_format_value(feels_like)}°C.")
-        if condition:
-            condition_text = str(condition).replace("_", " ").strip().capitalize()
-            parts.append(f"Condition: {condition_text}.")
-        if humidity is not None:
-            parts.append(f"Humidity: {_format_value(humidity)}%.")
-        if wind_speed is not None:
-            parts.append(f"Wind: {_format_value(wind_speed)} m/s.")
-
-        return " ".join(parts)
-
-    if forecast_data:
-        return "Forecast information was retrieved, but an AI summary could not be generated."
-
-    return "I could not generate an answer because the required weather data is unavailable."
-
-
-def _format_value(value):
-    if value is None:
-        return None
-    if isinstance(value, float):
-        return f"{value:.1f}".rstrip("0").rstrip(".")
-    return str(value)
-
-
-def _deterministic_weather_answer(question, weather_data=None, forecast_data=None, intelligence=None):
-    """Fast response using only live data already retrieved."""
-    q = (question or "").lower()
-
-    if weather_data:
-        city = weather_data.get("city") or "the requested location"
-        country = weather_data.get("country")
-        location = f"{city}, {country}" if country else city
-
-        temp = weather_data.get("temperature")
-        feels = weather_data.get("feels_like")
-        humidity = weather_data.get("humidity")
-        wind = weather_data.get("wind_speed")
-        condition = weather_data.get("weather") or weather_data.get("condition")
-
-        # Keep simple questions short.
+        # Temperature-specific question.
         if "temperature" in q or "how hot" in q or "how cold" in q:
-            if temp is not None:
-                answer = f"The current temperature in {location} is {_format_value(temp)}°C."
-                if feels is not None:
-                    answer += f" It feels like {_format_value(feels)}°C."
-                return answer
+            answer = (
+                f"🌡️ Temperature in {location}\n\n"
+                f"The current temperature is {_format_value(temperature)}°C."
+            )
+            if feels_like is not None:
+                answer += f" It feels like {_format_value(feels_like)}°C."
 
-        if "humidity" in q:
+            answer += f"\n\n☁️ Conditions: {condition}"
+
             if humidity is not None:
-                return f"The current humidity in {location} is {_format_value(humidity)}%."
+                answer += f"\n💧 Humidity: {_format_value(humidity)}%"
 
+            answer += "\n\nWeatherGPT insight: Dress comfortably and stay hydrated according to how the conditions feel."
+
+            recommendation = _smart_recommendation(intelligence)
+            if recommendation:
+                answer += f"\n\n{recommendation}"
+            return answer
+
+        # Humidity-specific question.
+        if "humidity" in q:
+            answer = (
+                f"💧 Humidity in {location}\n\n"
+                f"Current humidity is {_format_value(humidity)}%."
+            )
+            if temperature is not None:
+                answer += f"\n🌡️ Temperature: {_format_value(temperature)}°C"
+            answer += (
+                "\n\nWeatherGPT insight: Higher humidity can make warm weather "
+                "feel more uncomfortable."
+            )
+            return answer
+
+        # Wind-specific question.
         if "wind" in q:
-            if wind is not None:
-                return f"The current wind speed in {location} is {_format_value(wind)} m/s."
-
-        if any(x in q for x in ("rain", "raining", "umbrella")):
+            answer = (
+                f"🌬️ Wind in {location}\n\n"
+                f"Current wind speed is {_format_value(wind_speed)} m/s."
+            )
             if condition:
-                condition_text = str(condition).replace("_", " ").capitalize()
-                answer = f"Current conditions in {location}: {condition_text}."
-                if intelligence and intelligence.get("warnings"):
-                    answer += " " + intelligence["warnings"][0]
-                return answer
+                answer += f"\n☁️ Current condition: {condition}"
+            answer += (
+                "\n\nWeatherGPT insight: "
+                "Normal winds are generally comfortable, while stronger winds "
+                "can affect outdoor activities and travel."
+            )
 
-        parts = [f"Current weather in {location}:"]
-        if temp is not None:
-            parts.append(f"Temperature: {_format_value(temp)}°C.")
-        if feels is not None:
-            parts.append(f"Feels like: {_format_value(feels)}°C.")
-        if condition:
-            parts.append(f"Condition: {str(condition).replace('_', ' ').capitalize()}.")
-        if humidity is not None:
-            parts.append(f"Humidity: {_format_value(humidity)}%.")
-        if wind is not None:
-            parts.append(f"Wind: {_format_value(wind)} m/s.")
-        return " ".join(parts)
+            recommendation = _smart_recommendation(intelligence)
+            if recommendation:
+                answer += f"\n\n{recommendation}"
+            return answer
 
-    if forecast_data:
-        entries = forecast_data.get("forecast") or forecast_data.get("data") or []
-        if isinstance(entries, dict):
-            entries = entries.get("forecast") or entries.get("list") or []
+        # Rain/umbrella question.
+        if any(x in q for x in ("rain", "raining", "umbrella")):
+            rainy = any(
+                word in condition.lower()
+                for word in ("rain", "drizzle", "shower", "thunderstorm")
+            )
 
-        if entries:
-            lines = ["Here is the forecast:"]
-            for item in entries[:5]:
-                dt = item.get("datetime") or item.get("date") or "Forecast"
-                temp = item.get("temperature")
-                condition = item.get("weather") or item.get("condition")
-                rain = item.get("rain_3h")
-                line = str(dt)
-                if temp is not None:
-                    line += f" — {_format_value(temp)}°C"
-                if condition:
-                    line += f", {str(condition).replace('_', ' ')}"
-                if rain is not None and float(rain or 0) > 0:
-                    line += f", rain {_format_value(rain)} mm"
-                lines.append(line + ".")
-            return "\n".join(lines)
+            if rainy:
+                answer = (
+                    f"🌧️ Rain update for {location}\n\n"
+                    f"Current conditions indicate {condition.lower()}."
+                    "\n\n💡 Carry an umbrella and be careful on wet or slippery roads."
+                )
+            else:
+                answer = (
+                    f"🌤️ Rain update for {location}\n\n"
+                    f"Current conditions are {condition.lower()}, with no rain indicated right now."
+                    "\n\nWeatherGPT insight: For a better rain decision, the next few hours forecast is more useful than current conditions alone."
+                )
+
+            recommendation = _smart_recommendation(intelligence)
+            if recommendation:
+                answer += f"\n\n{recommendation}"
+            return answer
+
+        # Default comprehensive current-weather response.
+        answer = (
+            f"🌤️ Current weather in {location}\n\n"
+            f"🌡️ Temperature: {_format_value(temperature)}°C\n"
+            f"🤗 Feels like: {_format_value(feels_like)}°C\n"
+            f"☁️ Conditions: {condition}\n"
+            f"💧 Humidity: {_format_value(humidity)}%\n"
+            f"🌬️ Wind: {_format_value(wind_speed)} m/s"
+        )
+
+        severity = intelligence.get("severity") if intelligence else None
+        if severity:
+            answer += f"\n\n📊 Weather risk level: {_severity_label(severity)}"
+
+        answer += (
+            "\n\nWeatherGPT insight: "
+            "The current conditions are summarized from live weather data, "
+            "with practical guidance based on the detected conditions."
+        )
+
+        recommendation = _smart_recommendation(intelligence)
+        if recommendation:
+            answer += f"\n\n{recommendation}"
+
+        return answer
 
     return None
+
 
 
 def ask_ai(question, weather_data=None, forecast_data=None, intelligence=None):

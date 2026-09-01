@@ -78,7 +78,7 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
       ? question
       : `${question} in ${locationName}`;
 
-    const apiPath = `${API_URL.replace(/\\/$/, "")}/smart-weather`;
+    const apiPath = `${API_URL.replace(/\/$/, "")}/smart-weather`;
 
     // `new URL()` needs an absolute base in the browser. In production
     // `/api` is intentionally relative so it works on any Vercel domain.
@@ -237,7 +237,7 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
                   )}
 
                   <div className="max-w-[88%] sm:max-w-[76%]">
-                    <div className={`rounded-2xl px-4 py-3 text-sm leading-6 ${isUser ? "rounded-br-md bg-cyan-400 text-slate-950" : chatMessage.error ? "rounded-bl-md border border-rose-400/20 bg-rose-400/5 text-rose-200" : "rounded-bl-md border border-white/[0.07] bg-slate-800/70 text-slate-200"}`}>
+                    <div className={`whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-6 ${isUser ? "rounded-br-md bg-cyan-400 text-slate-950" : chatMessage.error ? "rounded-bl-md border border-rose-400/20 bg-rose-400/5 text-rose-200" : "rounded-bl-md border border-white/[0.07] bg-slate-800/70 text-slate-200"}`}>
                       {chatMessage.text}
                     </div>
 
