@@ -204,6 +204,35 @@ def _deterministic_weather_answer(
             )
         ]
 
+        if "next 3 hours" in q or "next three hours" in q:
+            item = items[0]
+            when = item.get("datetime", "the next forecast period")
+            temp = item.get("temperature")
+            condition = _condition_label(item.get("weather"))
+            rain = float(item.get("rain_3h") or 0)
+
+            answer = (
+                f"⏱️ Next 3 hours in {location}\n\n"
+                f"Forecast period: {when}\n"
+                f"☁️ Conditions: {condition}\n"
+            )
+
+            if temp is not None:
+                answer += f"🌡️ Temperature: {_format_value(temp)}°C\n"
+
+            if rain > 0:
+                answer += f"🌧️ Rain: About {_format_value(rain)} mm is forecast in this period.\n"
+                answer += "\n💡 Carry an umbrella if you are heading outdoors."
+            else:
+                answer += "🌧️ Rain: No measurable rainfall is indicated for this period.\n"
+                answer += "\n💡 Outdoor conditions look relatively stable for this forecast period."
+
+            recommendation = _smart_recommendation(intelligence)
+            if recommendation:
+                answer += f"\n\n{recommendation}"
+
+            return answer
+
         if "rain" in q or "umbrella" in q:
             if rainy_items:
                 first = rainy_items[0]
@@ -548,6 +577,14 @@ def detect_time(question):
     ):
         return "NOW"
 
+    if (
+        re.search(r"\bnext\s+3\s+hours?\b", text)
+        or re.search(r"\bnext\s+three\s+hours?\b", text)
+        or "in the next 3 hours" in text
+        or "next three hours" in text
+    ):
+        return "NEXT_3_HOURS"
+
     if "tomorrow" in text:
         return "TOMORROW"
 
@@ -672,7 +709,7 @@ def _parse_understanding(result, fallback_city, fallback_intent, fallback_time):
         "HUMIDITY", "WIND", "WEATHER_ADVICE", "GENERAL_WEATHER",
     }
     allowed_times = {
-        "NOW", "TODAY", "TOMORROW", "THIS_WEEK",
+        "NOW", "TODAY", "TOMORROW", "NEXT_3_HOURS", "THIS_WEEK",
         "THIS_WEEKEND", "FUTURE", "UNKNOWN",
     }
 

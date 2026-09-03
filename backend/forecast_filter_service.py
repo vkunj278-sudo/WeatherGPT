@@ -114,6 +114,29 @@ def filter_forecast(
         ]
 
     # -----------------------------------------------------
+    # NEXT 3 HOURS
+    # -----------------------------------------------------
+
+    elif time_period == "NEXT_3_HOURS":
+
+        # OpenWeather provides 3-hour forecast intervals. Select the
+        # nearest upcoming interval so the answer is fast and precise.
+        now = datetime.now()
+        future_items = [
+            (dt, item)
+            for dt, item in parsed_items
+            if dt >= now
+        ]
+
+        if future_items:
+            filtered = [min(
+                future_items,
+                key=lambda pair: (pair[0] - now).total_seconds()
+            )[1]]
+        else:
+            filtered = [parsed_items[-1][1]]
+
+    # -----------------------------------------------------
     # TOMORROW
     # -----------------------------------------------------
 
