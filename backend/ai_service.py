@@ -473,10 +473,8 @@ Return only the final user-facing answer.
     client = get_client()
     if client is not None:
         try:
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt,
-            )
+            chat = client.chats.create(model=MODEL_NAME)
+            response = chat.send_message(prompt)
             result = getattr(response, "text", None)
             if result and result.strip():
                 return result.strip()
@@ -823,10 +821,8 @@ Return ONLY the three lines.
 
     if client is not None:
         try:
-            response = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt,
-            )
+            chat = client.chats.create(model=MODEL_NAME)
+            response = chat.send_message(prompt)
 
             result = getattr(response, "text", "").strip()
 
