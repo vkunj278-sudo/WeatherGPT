@@ -16,8 +16,6 @@ import {
   MapPin,
 } from "lucide-react";
 
-// Local development uses the FastAPI server directly.
-// Production uses the Vercel /api route so the browser never tries to call localhost.
 const API_URL =
   import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? "http://127.0.0.1:8000" : "/api");
@@ -58,35 +56,26 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
 
   const formatAnswer = (text) => {
     if (!text) return "I couldn't generate a weather response.";
-    return text
-      .replace(/\*\*(.*?)\*\*/g, "$1")
-      .replace(/^#+\s*/gm, "")
-      .trim();
+    return text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/^#+\s*/gm, "").trim();
   };
 
   const askBackend = async (question) => {
-    // The selected map location becomes the implicit location for follow-up questions.
-    const lower = question.toLowerCase();
-    const hasLocation = /\b(?:in|at|for|near)\s+(?:the\s+)?[a-z][a-z .'-]+/i.test(question);
-    const hasKnownLocation = [
-      "ahmedabad", "surat", "mumbai", "delhi", "new delhi", "bengaluru",
-      "bangalore", "chennai", "hyderabad", "pune", "kolkata", "vadodara",
-      "rajkot", "jaipur", "lucknow", "indore", "bhavnagar",
-    ].some((city) => lower.includes(city));
-
-    const finalQuestion = hasLocation || hasKnownLocation
-      ? question
-      : `${question} in ${locationName}`;
-
+    // IMPORTANT:
+    // Never append the selected city to the user's sentence.
+    // Example:
+    // selected = Bhavnagar
+    // question = "What is the weather in London?"
+    // backend must receive exactly "What is the weather in London?"
+    // and selected_city="Bhavnagar" as a separate field.
     const apiPath = `${API_URL.replace(/\/$/, "")}/smart-weather`;
 
-    // `new URL()` needs an absolute base in the browser. In production
-    // `/api` is intentionally relative so it works on any Vercel domain.
     const url = apiPath.startsWith("http")
       ? new URL(apiPath)
       : new URL(apiPath, window.location.origin);
-    url.searchParams.set("question", finalQuestion);
+
+    url.searchParams.set("question", question);
     url.searchParams.set("session_id", sessionId);
+    url.searchParams.set("selected_city", locationName);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
@@ -135,11 +124,7 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
       const result = await askBackend(userQuestion);
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "bot",
-          text: result.text,
-          data: result.data,
-        },
+        { sender: "bot", text: result.text, data: result.data },
       ]);
     } catch (error) {
       console.error("WeatherGPT chat error:", error);
@@ -182,7 +167,9 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
             <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
               <Sparkles size={16} />
             </div>
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">AI Assistant</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+              AI Assistant
+            </span>
           </div>
           <h2 className="text-3xl font-semibold tracking-tight text-white">Ask WeatherGPT</h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -210,7 +197,9 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
               <p className="text-sm font-semibold text-white">WeatherGPT</p>
               <div className="mt-0.5 flex items-center gap-2">
                 <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-amber-400"}`} />
-                <span className="text-[11px] text-slate-500">{online ? "Live weather connected" : "Connection issue"}</span>
+                <span className="text-[11px] text-slate-500">
+                  {online ? "Live weather connected" : "Connection issue"}
+                </span>
               </div>
             </div>
           </div>
@@ -229,7 +218,10 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
               const intelligence = chatMessage.data?.intelligence;
 
               return (
-                <div key={`${index}-${chatMessage.text}`} className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={`${index}-${chatMessage.text}`}
+                  className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}
+                >
                   {!isUser && (
                     <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600">
                       <Bot size={16} />
@@ -237,16 +229,44 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
                   )}
 
                   <div className="max-w-[88%] sm:max-w-[76%]">
-                    <div className={`whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-6 ${isUser ? "rounded-br-md bg-cyan-400 text-slate-950" : chatMessage.error ? "rounded-bl-md border border-rose-400/20 bg-rose-400/5 text-rose-200" : "rounded-bl-md border border-white/[0.07] bg-slate-800/70 text-slate-200"}`}>
+                    <div
+                      className={`whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-6 ${
+                        isUser
+                          ? "rounded-br-md bg-cyan-400 text-slate-950"
+                          : chatMessage.error
+                          ? "rounded-bl-md border border-rose-400/20 bg-rose-400/5 text-rose-200"
+                          : "rounded-bl-md border border-white/[0.07] bg-slate-800/70 text-slate-200"
+                      }`}
+                    >
                       {chatMessage.text}
                     </div>
 
                     {!isUser && weather && (
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400">
-                        {weather.temperature != null && <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1"><Thermometer size={12} className="mr-1 inline" />{temperature(weather.temperature)}°{temperatureUnit}</span>}
-                        {weather.humidity != null && <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1"><Droplets size={12} className="mr-1 inline" />{weather.humidity}% humidity</span>}
-                        {weather.wind_speed != null && <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1"><Wind size={12} className="mr-1 inline" />{Math.round(weather.wind_speed)} m/s</span>}
-                        {chatMessage.data?.detected_city && <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1"><MapPin size={12} className="mr-1 inline" />{chatMessage.data.detected_city}</span>}
+                        {weather.temperature != null && (
+                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1">
+                            <Thermometer size={12} className="mr-1 inline" />
+                            {temperature(weather.temperature)}°{temperatureUnit}
+                          </span>
+                        )}
+                        {weather.humidity != null && (
+                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1">
+                            <Droplets size={12} className="mr-1 inline" />
+                            {weather.humidity}% humidity
+                          </span>
+                        )}
+                        {weather.wind_speed != null && (
+                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1">
+                            <Wind size={12} className="mr-1 inline" />
+                            {Math.round(weather.wind_speed)} m/s
+                          </span>
+                        )}
+                        {chatMessage.data?.detected_city && (
+                          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1">
+                            <MapPin size={12} className="mr-1 inline" />
+                            {chatMessage.data.detected_city}
+                          </span>
+                        )}
                       </div>
                     )}
 
@@ -269,7 +289,9 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
 
             {loading && (
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600"><Bot size={16} /></div>
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600">
+                  <Bot size={16} />
+                </div>
                 <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-white/[0.07] bg-slate-800/70 px-5 py-4">
                   <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-300 [animation-delay:-.2s]" />
                   <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-300 [animation-delay:-.1s]" />
@@ -315,7 +337,9 @@ function ChatBox({ locationName = "Selected Location", temperatureUnit = "C" }) 
               <Send size={17} />
             </button>
           </div>
-          <p className="mt-2 text-center text-[10px] text-slate-600">Enter to send · WeatherGPT uses live weather data</p>
+          <p className="mt-2 text-center text-[10px] text-slate-600">
+            Enter to send · WeatherGPT uses live weather data
+          </p>
         </div>
       </div>
     </section>

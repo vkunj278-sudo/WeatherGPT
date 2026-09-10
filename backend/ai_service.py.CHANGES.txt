@@ -1,0 +1,155 @@
+# ============================================================
+# WEATHERGPT CITY PRIORITY FIX
+# ============================================================
+# In ai_service.py, replace the existing understand_question()
+# function with the version below.
+#
+# IMPORTANT PRIORITY:
+# 1. City explicitly mentioned in the CURRENT question
+# 2. selected_city from the UI
+# 3. previous city from conversation memory
+#
+# This prevents a selected map city from overriding:
+# "What is the weather in London?"
+# when the map currently has Bhavnagar selected.
+
+def understand_question(
+    question,
+    conversation_context=None,
+    selected_city=None
+):
+    if conversation_context is None:
+        conversation_context = {}
+
+    # First: extract a city from the user's CURRENT question.
+    city = extract_city(question)
+
+    intent = detect_intent(question)
+    time_period = detect_time(question)
+
+    # IMPORTANT:
+    # Only use the selected UI city if the current question
+    # does NOT contain an explicit city.
+    if city == "UNKNOWN":
+        if selected_city:
+            city = normalize_city(selected_city)
+
+    # If there is still no city, use conversation memory.
+    if city == "UNKNOWN":
+        previous_city = conversation_context.get("city")
+        if previous_city:
+            city = normalize_city(previous_city)
+
+    if intent == "GENERAL_WEATHER":
+        previous_intent = conversation_context.get("intent")
+        if previous_intent:
+            intent = previous_intent
+
+    if time_period == "UNKNOWN":
+        previous_time = conversation_context.get("time")
+        if previous_time:
+            time_period = previous_time
+
+    # Do not call an LLM for a question we already understand.
+    if city != "UNKNOWN" and intent != "GENERAL_WEATHER":
+        return {
+            "city": city,
+            "intent": intent,
+            "time": time_period,
+        }
+
+    previous_city = conversation_context.get("city", "UNKNOWN")
+    previous_intent = conversation_context.get("intent", "UNKNOWN")
+    previous_time = conversation_context.get("time", "UNKNOWN")
+    previous_question = conversation_context.get("last_question", "NONE")
+
+    selected_city_for_prompt = (
+        normalize_city(selected_city)
+        if selected_city
+        else "UNKNOWN"
+    )
+
+    prompt = f"""
+You are the query understanding system for WeatherGPT.
+
+IMPORTANT CITY RULE:
+- If the CURRENT QUESTION explicitly mentions a city/location, use that city.
+- The selected UI city is ONLY a fallback.
+- Never replace an explicitly requested city with the selected UI city.
+
+SELECTED UI CITY:
+{selected_city_for_prompt}
+
+PREVIOUS CONVERSATION:
+City: {previous_city}
+Intent: {previous_intent}
+Time: {previous_time}
+Previous question: {previous_question}
+
+CURRENT QUESTION:
+"{question}"
+
+Return EXACTLY:
+CITY: <city or UNKNOWN>
+INTENT: <intent>
+TIME: <time>
+
+Allowed intents:
+CURRENT_WEATHER
+FORECAST
+RAIN
+TEMPERATURE
+HUMIDITY
+WIND
+WEATHER_ADVICE
+GENERAL_WEATHER
+
+Allowed time periods:
+NOW
+TODAY
+TOMORROW
+NEXT_3_HOURS
+THIS_WEEK
+THIS_WEEKEND
+FUTURE
+UNKNOWN
+
+Return ONLY the three lines.
+"""
+
+    client = get_client()
+
+    if client is not None:
+        try:
+            chat = client.chats.create(model=MODEL_NAME)
+            response = chat.send_message(prompt)
+
+            result = getattr(response, "text", "").strip()
+
+            if result:
+                return _parse_understanding(
+                    result,
+                    city,
+                    intent,
+                    time_period,
+                )
+
+        except Exception as error:
+            print("Gemini understanding error:", repr(error))
+
+    deepseek_result = ask_deepseek(prompt)
+
+    if deepseek_result:
+        return _parse_understanding(
+            deepseek_result,
+            city,
+            intent,
+            time_period,
+        )
+
+    return {
+        "city": city,
+        "intent": intent,
+        "time": time_period,
+        "error": "AI understanding unavailable; using locally detected information.",
+    }

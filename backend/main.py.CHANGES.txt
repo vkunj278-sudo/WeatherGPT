@@ -1,0 +1,25 @@
+# In backend/main.py, change the smart_weather() function signature:
+
+@app.get("/smart-weather")
+def smart_weather(
+    question: str,
+    session_id: str = "default",
+    selected_city: str = None
+):
+
+# Then change the understand_weather_question() call from:
+
+understanding = understand_weather_question(
+    question,
+    memory
+)
+
+# TO:
+
+understanding = understand_weather_question(
+    question,
+    memory,
+    selected_city=selected_city
+)
+
+# No other changes in main.py are required.
